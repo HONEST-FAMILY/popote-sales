@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>매출 대시보드</title>
+<style>
+  :root{
+    --bg:#f7f5f1; --card:#ffffff; --card2:#fbfaf7; --ink:#1d1a16; --ink2:#4a443c;
+    --muted:#8a8378; --line:#e7e2d9; --line2:#efeae1;
+    --accent:#1f6f8f; --accent-soft:#e4eef2;
+    --good:#1a8f5f; --warn:#c07a00; --bad:#c7452f;
+    --shadow:0 1px 2px rgba(40,34,24,.05),0 8px 24px rgba(40,34,24,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#14161b; --card:#1d2027; --card2:#20242c; --ink:#e9ebee; --ink2:#b7bcc4;
+      --muted:#7f8893; --line:#2c3139; --line2:#262b33;
+      --accent:#59b6d6; --accent-soft:#1a2f38;
+      --good:#34c488; --warn:#e0a53a; --bad:#eb6a52;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f7f5f1; --card:#ffffff; --card2:#fbfaf7; --ink:#1d1a16; --ink2:#4a443c;
+    --muted:#8a8378; --line:#e7e2d9; --line2:#efeae1;
+    --accent:#1f6f8f; --accent-soft:#e4eef2;
+    --good:#1a8f5f; --warn:#c07a00; --bad:#c7452f;
+    --shadow:0 1px 2px rgba(40,34,24,.05),0 8px 24px rgba(40,34,24,.06);
+  }
+  :root[data-theme="dark"]{
+    --bg:#14161b; --card:#1d2027; --card2:#20242c; --ink:#e9ebee; --ink2:#b7bcc4;
+    --muted:#7f8893; --line:#2c3139; --line2:#262b33;
+    --accent:#59b6d6; --accent-soft:#1a2f38;
+    --good:#34c488; --warn:#e0a53a; --bad:#eb6a52;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 72px}
+  h1{font-size:25px;font-weight:800;letter-spacing:-.6px;margin:0}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:5px}
+  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--accent)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  section{margin-top:22px}
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 2px 11px}
+  .sec-h h2{font-size:16.5px;font-weight:750;letter-spacing:-.3px;margin:0}
+  .sec-h .note{font-size:12px;color:var(--muted)}
+
+  .verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:14px;
+    background:linear-gradient(180deg,var(--accent-soft),transparent);border:1px solid var(--line)}
+  .verdict .mark{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--good);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:19px}
+  .verdict b{font-size:15.5px}
+  .verdict p{margin:3px 0 0;font-size:13.5px;color:var(--ink2)}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .tile{padding:14px 15px;border-radius:13px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow)}
+  .tile .k{font-size:11.5px;color:var(--muted);font-weight:650;letter-spacing:.2px}
+  .tile .v{font-size:23px;font-weight:800;letter-spacing:-.5px;margin-top:5px}
+  .tile .d{font-size:11.5px;margin-top:3px;color:var(--ink2)}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px}
+  .chip.up{color:var(--good);background:color-mix(in srgb,var(--good) 14%,transparent)}
+  .chip.down{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+  .chip.flat{color:var(--ink2);background:var(--line2)}
+
+  .filters{display:flex;flex-wrap:wrap;gap:16px;padding:14px 16px}
+  .fgroup{display:flex;flex-direction:column;gap:6px}
+  .fgroup .lab{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.3px;text-transform:uppercase}
+  .btns{display:flex;gap:5px;flex-wrap:wrap}
+  .btn{appearance:none;border:1px solid var(--line);background:var(--card2);color:var(--ink2);
+    font:inherit;font-size:13px;font-weight:650;padding:6px 13px;border-radius:9px;cursor:pointer;transition:.12s}
+  .btn:hover{border-color:var(--accent);color:var(--ink)}
+  .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.dot{display:inline-flex;align-items:center;gap:7px}
+  .btn.dot i{width:9px;height:9px;border-radius:3px;display:inline-block}
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
+
+  .chartcard{padding:16px 16px 10px}
+  .chart-title{font-size:13.5px;font-weight:700;margin:0 2px 2px}
+  .chart-sub{font-size:12px;color:var(--muted);margin:0 2px 8px}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .scroll{overflow-x:auto}
+  text{font-family:inherit}
+  .axis{fill:var(--muted);font-size:11px}
+  .axis-y{fill:var(--muted);font-size:10.5px}
+  .grid{stroke:var(--line2);stroke-width:1}
+  .baseline{stroke:var(--line);stroke-width:1.5}
+  .vlabel{fill:var(--ink2);font-size:11px;font-weight:650}
+  .situ{fill:var(--muted);font-size:10px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:12px;padding:2px 4px 10px;font-size:12px;color:var(--ink2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 11px;text-align:right;border-bottom:1px solid var(--line2)}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.3px;text-transform:uppercase;background:var(--card2)}
+  tbody tr:hover{background:var(--card2)}
+  td.pos{color:var(--good);font-weight:650}
+  td.neg{color:var(--bad);font-weight:650}
+  .situcell{color:var(--muted);font-size:11.5px}
+
+  .mini{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .footnote{font-size:12px;color:var(--muted);line-height:1.7;padding:2px 4px}
+  .footnote b{color:var(--ink2)}
+  #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
+    font-size:12px;padding:7px 10px;border-radius:8px;opacity:0;transition:opacity .1s;white-space:nowrap;
+    box-shadow:0 6px 20px rgba(0,0,0,.25);font-weight:600}
+  #tip .t2{opacity:.8;font-weight:500}
+  .themebtn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink2);
+    font:inherit;font-size:12px;font-weight:650;padding:6px 11px;border-radius:9px;cursor:pointer}
+  .state{padding:48px 20px;text-align:center;color:var(--muted);font-size:14px}
+  .hidden{display:none!important}
+  @media (max-width:720px){ .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px} }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="title">매출 대시보드</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <button class="themebtn" id="themeToggle" type="button">◑ 테마</button>
+  </header>
+
+  <div id="loading" class="state">데이터 불러오는 중…</div>
+  <div id="error" class="state hidden"></div>
+
+  <main id="app" class="hidden">
+    <section id="verdictSec" class="hidden">
+      <div class="verdict">
+        <div class="mark" id="verdictMark">✓</div>
+        <div><b id="verdictTitle"></b><p id="verdictBody"></p></div>
+      </div>
+    </section>
+
+    <section id="tilesSec" class="hidden"><div class="tiles" id="tiles"></div></section>
+
+    <section>
+      <div class="sec-h"><h2>채널별 · 주말/평일 추이</h2><div class="note">버튼으로 채널·구분을 바꿔보세요</div></div>
+      <div class="card">
+        <div class="filters">
+          <div class="fgroup"><div class="lab">채널</div><div class="btns" id="chBtns"></div></div>
+          <div class="fgroup"><div class="lab">구분</div><div class="btns" id="segBtns"></div></div>
+          <div class="fgroup"><div class="lab">지표</div><div class="btns" id="metBtns"></div></div>
+        </div>
+        <div class="chartcard">
+          <div class="chart-title" id="mainTitle"></div>
+          <div class="chart-sub" id="mainSub"></div>
+          <div class="scroll"><svg id="mainChart" viewBox="0 0 680 300" role="img" aria-label="주간 매출 차트"></svg></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="mini">
+        <div>
+          <div class="sec-h"><h2>채널별 비중</h2></div>
+          <div class="card chartcard">
+            <div class="chart-sub" style="margin-top:2px" id="stackSub"></div>
+            <div class="legend" id="stackLegend"></div>
+            <div class="scroll"><svg id="stackChart" viewBox="0 0 440 280" role="img" aria-label="채널별 비중 누적 막대"></svg></div>
+          </div>
+        </div>
+        <div id="holiWrap">
+          <div class="sec-h"><h2 id="holiTitle">연휴 뒤 패턴</h2></div>
+          <div class="card chartcard">
+            <div class="chart-sub" style="margin-top:2px" id="holiSub"></div>
+            <div class="legend" id="lineLegend"></div>
+            <div class="scroll"><svg id="lineChart" viewBox="0 0 440 280" role="img" aria-label="연휴 뒤 패턴 선 그래프"></svg></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-h"><h2 id="tableTitle">주간 상세</h2></div>
+      <div class="card scroll">
+        <table>
+          <thead><tr><th>주</th><th id="thRev">매출</th><th>건수</th><th>전주 대비</th><th>상황</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="footSec" class="hidden"><div class="footnote" id="footnote"></div></section>
+  </main>
+</div>
+
+<div id="tip"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt=n=>Math.round(n).toLocaleString();
+const isDark=()=>{const t=document.documentElement.getAttribute('data-theme');
+  return t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches);};
+
+let D=null, UNIT='만', sel={ch:'all',seg:'전체',met:'매출'};
+const SEGS=['전체','주말','평일'], METS=['매출','건수'];
+
+// 채널 색 (Okabe-Ito, 색각이상 안전) — 데이터에 색이 없을 때 순서대로 배정
+const POOL=[
+  {c:'#0072B2',d:'#56b4e9'},{c:'#009E73',d:'#2fc39a'},{c:'#D55E00',d:'#ef7a47'},
+  {c:'#E69F00',d:'#f0b84a'},{c:'#CC79A7',d:'#e48fc0'},{c:'#56B4E9',d:'#8fd0f5'},
+];
+function chColor(id){
+  if(id==='all') return cssv('--accent');
+  const ch=D.channels.find(c=>c.id===id); if(!ch) return cssv('--accent');
+  const i=D.channels.indexOf(ch);
+  const c=isDark()?(ch.colorDark||POOL[i%POOL.length].d):(ch.color||POOL[i%POOL.length].c);
+  return c;
+}
+function chName(id){ if(id==='all') return '종합'; const ch=D.channels.find(c=>c.id===id); return ch?ch.name:id; }
+function chList(){ return [{id:'all',name:'종합'}].concat(D.channels); }
+function seriesOf(id){ return D.series[id]||{전체:{r:[],c:[]},주말:{r:[],c:[]},평일:{r:[],c:[]}}; }
+function labelsOf(seg){ const w=D.weeks||{}; return (seg==='주말'?w.weekend:seg==='평일'?w.weekday:w.all)||w.all||[]; }
+
+function unlock(d){
+  if(!d.enc) return d;
+  const k=new URLSearchParams(location.hash.slice(1)).get('k');
+  if(!k) throw new Error('링크에 열쇠(#k=)가 없습니다. 받은 링크 전체를 그대로 여세요.');
+  const bin=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),ch=>ch.charCodeAt(0));
+  return crypto.subtle.importKey('raw',bin(k),'AES-GCM',false,['decrypt'])
+    .then(key=>crypto.subtle.decrypt({name:'AES-GCM',iv:bin(d.iv)},key,bin(d.data)))
+    .then(buf=>JSON.parse(new TextDecoder().decode(buf)),()=>{throw new Error('링크의 열쇠가 맞지 않습니다.');});
+}
+
+function boot(){
+  const cid=new URLSearchParams(location.search).get('c')||'sample';
+  fetch('data/'+cid+'.json',{cache:'no-store'})
+    .then(r=>{if(!r.ok)throw new Error('data/'+cid+'.json ('+r.status+')');return r.json();})
+    .then(unlock)
+    .then(d=>{D=d;setup();})
+    .catch(e=>{$('#loading').classList.add('hidden');
+      const el=$('#error');el.classList.remove('hidden');
+      el.innerHTML='데이터를 불러오지 못했습니다.<br><span style="font-size:12px">'+e.message+'</span>';});
+}
+
+function setup(){
+  UNIT=D.revenueUnitLabel||'만';
+  document.title=(D.clientName?D.clientName+' ':'')+'매출 대시보드';
+  $('#eyebrow').textContent=D.eyebrow||((D.clientName||'')+' · 판매 채널 매출 점검');
+  $('#title').textContent=D.title||'매출 대시보드';
+  const r=D.range||{};
+  $('#subtitle').textContent=[r.from&&r.to?(r.from+' ~ '+r.to):'',D.granularityLabel||'주간 기준',
+    D.weekdayRule||'주말=금~일, 평일=월~목',D.source||''].filter(Boolean).join(' · ');
+  $('#thRev').textContent='매출('+UNIT+')';
+
+  // verdict
+  if(D.verdict){$('#verdictSec').classList.remove('hidden');
+    $('#verdictTitle').textContent=D.verdict.title||'';$('#verdictBody').textContent=D.verdict.body||'';
+    if(D.verdict.mark)$('#verdictMark').textContent=D.verdict.mark;
+    if(D.verdict.tone==='bad')$('#verdictMark').style.background='var(--bad)';
+    else if(D.verdict.tone==='warn')$('#verdictMark').style.background='var(--warn)';}
+  // tiles
+  if(Array.isArray(D.tiles)&&D.tiles.length){$('#tilesSec').classList.remove('hidden');
+    $('#tiles').innerHTML=D.tiles.map(t=>{
+      const chip=t.chip?('<span class="chip '+(t.chipTone||'flat')+'">'+t.chip+'</span>'):'';
+      return '<div class="tile"><div class="k">'+(t.k||'')+'</div><div class="v">'+(t.v||'')+'</div>'+
+             '<div class="d">'+(t.d||'')+' '+chip+'</div></div>';}).join('');}
+  // footnote
+  if(D.footnote){$('#footSec').classList.remove('hidden');$('#footnote').innerHTML=D.footnote;}
+  // holiday (optional)
+  if(!D.holiday){$('#holiWrap').classList.add('hidden');}
+  else{if(D.holiday.title)$('#holiTitle').textContent=D.holiday.title;
+    $('#holiSub').textContent=D.holiday.sub||'';}
+  $('#stackSub').textContent=D.stackSub||('주간 전체 매출을 채널이 어떻게 나눠 갖는가 ('+UNIT+')');
+
+  buildBtns();
+  $('#loading').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  renderAll();
+}
+
+function mkBtns(host,items,key,withDot){
+  host.innerHTML='';
+  items.forEach(it=>{
+    const b=document.createElement('button');b.className='btn'+(withDot?' dot':'');b.type='button';
+    b.setAttribute('aria-pressed',sel[key]===it.v);
+    if(withDot){const i=document.createElement('i');i.style.background=it.col||'var(--accent)';b.appendChild(i);}
+    b.appendChild(document.createTextNode(it.t));
+    b.onclick=()=>{sel[key]=it.v;[...host.children].forEach(c=>c.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true');render();};
+    host.appendChild(b);
+  });
+}
+function buildBtns(){
+  mkBtns($('#chBtns'),chList().map(c=>({t:c.name,v:c.id,col:chColor(c.id)})),'ch',true);
+  mkBtns($('#segBtns'),SEGS.map(k=>({t:k,v:k})),'seg',false);
+  mkBtns($('#metBtns'),METS.map(k=>({t:k,v:k})),'met',false);
+}
+
+const tip=$('#tip');
+function showTip(e,html){tip.innerHTML=html;tip.style.opacity='1';moveTip(e);}
+function moveTip(e){const x=(e.touches?e.touches[0].clientX:e.clientX),y=(e.touches?e.touches[0].clientY:e.clientY);
+  tip.style.left=Math.min(x+14,innerWidth-tip.offsetWidth-8)+'px';tip.style.top=(y-tip.offsetHeight-12)+'px';}
+function hideTip(){tip.style.opacity='0';}
+
+function renderMain(){
+  const d=seriesOf(sel.ch)[sel.seg]||{r:[],c:[]};
+  const vals=sel.met==='매출'?d.r:d.c;
+  const labels=labelsOf(sel.seg);
+  const unit=sel.met==='매출'?UNIT:'건';
+  const col=chColor(sel.ch);
+  const situ=(sel.seg==='전체'&&D.situations)?D.situations:null;
+  const W=680,H=300,padL=46,padR=14,padT=18,padB=situ?54:40;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const max=(Math.max(...vals,0)||1)*1.15;
+  const x=i=>padL+(iw/vals.length)*(i+0.5);
+  const bw=Math.min(54,(iw/vals.length)*0.56);
+  const y=v=>padT+ih-(v/max)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  const ticks=4;
+  for(let t=0;t<=ticks;t++){const gv=max*t/ticks;const gy=y(gv);
+    s+=`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/>`;
+    s+=`<text class="axis-y" x="${padL-7}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`;}
+  s+=`<line class="baseline" x1="${padL}" y1="${padT+ih}" x2="${W-padR}" y2="${padT+ih}"/>`;
+  vals.forEach((v,i)=>{
+    const bx=x(i)-bw/2, by=y(v), bh=padT+ih-by;
+    s+=`<rect data-i="${i}" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="4" fill="${col}"></rect>`;
+    s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(by-6).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`;
+    s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+16).toFixed(1)}" text-anchor="middle">${labels[i]||''}</text>`;
+    if(situ&&situ[i]){const st=situ[i].length>8?situ[i].slice(0,8)+'…':situ[i];
+      s+=`<text class="situ" x="${x(i).toFixed(1)}" y="${(padT+ih+32).toFixed(1)}" text-anchor="middle">${st}</text>`;}
+  });
+  s+=`</svg>`;
+  $('#mainChart').outerHTML=s.replace('<svg ','<svg id="mainChart" ');
+  const svg=$('#mainChart');
+  svg.querySelectorAll('rect[data-i]').forEach(r=>{
+    const i=+r.dataset.i;r.style.cursor='pointer';
+    r.addEventListener('mousemove',e=>showTip(e,`<div>${labels[i]||''} · ${chName(sel.ch)} ${sel.seg}</div><div class="t2">${sel.met} ${fmt(vals[i])}${unit}${situ&&situ[i]?' · '+situ[i]:''}</div>`));
+    r.addEventListener('mouseleave',hideTip);
+  });
+  $('#mainTitle').textContent=`${chName(sel.ch)} · ${sel.seg} · ${sel.met}`;
+  $('#mainSub').textContent=`${sel.seg} 기준 주간 추이 (${sel.met==='매출'?UNIT:'건'})`;
+}
+
+function renderStack(){
+  const chs=D.channels;
+  const weeks=labelsOf('전체');
+  const W=440,H=280,padL=40,padR=10,padT=10,padB=58;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const totals=weeks.map((_,i)=>chs.reduce((a,c)=>a+((seriesOf(c.id)['전체'].r[i])||0),0));
+  const max=(Math.max(...totals,0)||1)*1.1;
+  const x=i=>padL+(iw/weeks.length)*(i+0.5);
+  const bw=Math.min(34,(iw/weeks.length)*0.6);
+  const y=v=>padT+ih-(v/max)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  const ticks=4;for(let t=0;t<=ticks;t++){const gv=max*t/ticks;const gy=y(gv);
+    s+=`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/>`;
+    s+=`<text class="axis-y" x="${padL-6}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`;}
+  s+=`<line class="baseline" x1="${padL}" y1="${padT+ih}" x2="${W-padR}" y2="${padT+ih}"/>`;
+  weeks.forEach((w,i)=>{
+    let acc=0;
+    chs.forEach(c=>{
+      const v=(seriesOf(c.id)['전체'].r[i])||0;const yTop=y(acc+v), hBar=(v/max)*ih;
+      s+=`<rect data-w="${i}" data-k="${c.id}" data-v="${v}" x="${(x(i)-bw/2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw}" height="${Math.max(0,hBar-2).toFixed(1)}" rx="2.5" fill="${chColor(c.id)}"></rect>`;
+      acc+=v;
+    });
+    s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+15).toFixed(1)}" text-anchor="middle" transform="rotate(32 ${x(i).toFixed(1)} ${(padT+ih+15).toFixed(1)})">${w}</text>`;
+    s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(y(totals[i])-5).toFixed(1)}" text-anchor="middle" font-size="10">${fmt(totals[i])}</text>`;
+  });
+  s+=`</svg>`;
+  $('#stackChart').outerHTML=s.replace('<svg ','<svg id="stackChart" ');
+  $('#stackChart').querySelectorAll('rect[data-k]').forEach(r=>{
+    r.style.cursor='pointer';
+    r.addEventListener('mousemove',e=>showTip(e,`<div>${weeks[+r.dataset.w]} · ${chName(r.dataset.k)}</div><div class="t2">${fmt(+r.dataset.v)}${UNIT}</div>`));
+    r.addEventListener('mouseleave',hideTip);
+  });
+  $('#stackLegend').innerHTML=chs.map(c=>`<span><i style="background:${chColor(c.id)}"></i>${c.name}</span>`).join('');
+}
+
+function renderLine(){
+  if(!D.holiday)return;
+  const HOLI=D.holiday, palette=['--c-c24','--accent','--good','--warn','--bad'];
+  const lineCol=(se,idx)=>se.color?(isDark()&&se.colorDark?se.colorDark:se.color):chColor((D.channels[idx]||{}).id||'all');
+  const W=440,H=280,padL=42,padR=14,padT=14,padB=42;
+  const iw=W-padL-padR, ih=H-padT-padB;
+  const allv=HOLI.series.flatMap(s=>s.v).filter(v=>v!=null);
+  const max=(Math.max(...allv,0)||1)*1.08, min=(Math.min(...allv,0))*0.9;
+  const xs=HOLI.x;
+  const x=xi=>padL+((xs.indexOf(xi))/(xs.length-1))*iw;
+  const y=v=>padT+ih-((v-min)/((max-min)||1))*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  const ticks=4;for(let t=0;t<=ticks;t++){const gv=min+(max-min)*t/ticks;const gy=y(gv);
+    s+=`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/>`;
+    s+=`<text class="axis-y" x="${padL-6}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`;}
+  const mx=x(0);
+  s+=`<line x1="${mx.toFixed(1)}" y1="${padT}" x2="${mx.toFixed(1)}" y2="${padT+ih}" stroke="var(--line)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  s+=`<text class="situ" x="${mx.toFixed(1)}" y="${(padT+9).toFixed(1)}" text-anchor="middle" fill="var(--ink2)">${HOLI.markerLabel||'기준 주'}</text>`;
+  xs.forEach(xi=>{s+=`<text class="axis" x="${x(xi).toFixed(1)}" y="${(padT+ih+16).toFixed(1)}" text-anchor="middle">${xi>0?'+'+xi:xi}</text>`;});
+  HOLI.series.forEach((se,si)=>{
+    const col=se.color?(isDark()&&se.colorDark?se.colorDark:se.color):cssv(palette[si%palette.length]);
+    let path='';
+    se.v.forEach((v,idx)=>{if(v==null)return;const px=x(xs[idx]),py=y(v);path+=(path?'L':'M')+px.toFixed(1)+' '+py.toFixed(1)+' ';});
+    s+=`<path d="${path}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    se.v.forEach((v,idx)=>{if(v==null)return;const px=x(xs[idx]),py=y(v);
+      s+=`<circle data-k="${se.k}" data-x="${xs[idx]}" data-v="${v}" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="4.5" fill="${col}" stroke="var(--card)" stroke-width="1.5"></circle>`;});
+  });
+  s+=`</svg>`;
+  $('#lineChart').outerHTML=s.replace('<svg ','<svg id="lineChart" ');
+  $('#lineChart').querySelectorAll('circle[data-k]').forEach(c=>{
+    c.style.cursor='pointer';
+    c.addEventListener('mousemove',e=>{const xi=+c.dataset.x;showTip(e,`<div>${c.dataset.k} · ${xi>0?'+'+xi+'주':(xi<0?xi+'주':'당주')}</div><div class="t2">${fmt(+c.dataset.v)}${UNIT}</div>`);});
+    c.addEventListener('mouseleave',hideTip);
+  });
+  const palette2=['--c-c24','--accent','--good','--warn','--bad'];
+  $('#lineLegend').innerHTML=HOLI.series.map((se,si)=>{
+    const col=se.color?(isDark()&&se.colorDark?se.colorDark:se.color):cssv(palette2[si%palette2.length]);
+    return `<span><i style="background:${col}"></i>${se.k}</span>`;}).join('');
+}
+
+function renderTable(){
+  const d=seriesOf(sel.ch)[sel.seg]||{r:[],c:[]};
+  const labels=labelsOf(sel.seg);
+  const situ=(sel.seg==='전체'&&D.situations)?D.situations:null;
+  let rows='';
+  d.r.forEach((rv,i)=>{
+    let delta='—',cls='';
+    if(i>0&&d.r[i-1]){const p=((rv-d.r[i-1])/d.r[i-1]*100);delta=(p>=0?'+':'')+p.toFixed(0)+'%';cls=p>0?'pos':(p<0?'neg':'');}
+    rows+=`<tr><td>${labels[i]||''}</td><td>${fmt(rv)}</td><td>${fmt(d.c[i]||0)}</td><td class="${cls}">${delta}</td><td class="situcell">${situ&&situ[i]?situ[i]:''}</td></tr>`;
+  });
+  $('#tbody').innerHTML=rows;
+  $('#tableTitle').textContent=`주간 상세 — ${chName(sel.ch)} · ${sel.seg}`;
+}
+
+function render(){renderMain();renderTable();}
+function renderAll(){renderMain();renderStack();renderLine();renderTable();}
+addEventListener('scroll',hideTip,{passive:true});
+
+$('#themeToggle').onclick=()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const now=cur==='dark'?'light':(cur==='light'?'dark':(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+  document.documentElement.setAttribute('data-theme',now);
+};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(D)renderAll();});
+new MutationObserver(()=>{if(D){buildBtns();renderAll();}}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+boot();
+</script>
+</body>
+</html>
