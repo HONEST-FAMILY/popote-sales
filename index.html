@@ -76,6 +76,12 @@
   .btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
   .btn.dot{display:inline-flex;align-items:center;gap:7px}
   .btn.dot i{width:9px;height:9px;border-radius:3px;display:inline-block}
+  input.btn{cursor:text;padding:5px 9px}
+  .tilde{align-self:center;color:var(--muted);font-size:13px}
+  .rangenote{padding:0 16px 13px;font-size:12px;color:var(--muted)}
+  @media (prefers-color-scheme:dark){input[type=date]{color-scheme:dark}}
+  :root[data-theme="dark"] input[type=date]{color-scheme:dark}
+  :root[data-theme="light"] input[type=date]{color-scheme:light}
   :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px}
 
   .chartcard{padding:16px 16px 10px}
@@ -134,6 +140,17 @@
   <div id="error" class="state hidden"></div>
 
   <main id="app" class="hidden">
+    <section id="rangeSec" class="hidden">
+      <div class="card">
+        <div class="filters">
+          <div class="fgroup"><div class="lab">기간</div><div class="btns"><input class="btn" type="date" id="fromDate" aria-label="시작일"><span class="tilde">~</span><input class="btn" type="date" id="toDate" aria-label="종료일"></div></div>
+          <div class="fgroup"><div class="lab">빠른 선택</div><div class="btns" id="presetBtns"></div></div>
+          <div class="fgroup"><div class="lab">단위</div><div class="btns" id="unitBtns"></div></div>
+        </div>
+        <div class="rangenote" id="rangeNote"></div>
+      </div>
+    </section>
+
     <section id="verdictSec" class="hidden">
       <div class="verdict">
         <div class="mark" id="verdictMark">✓</div>
@@ -184,7 +201,7 @@
       <div class="sec-h"><h2 id="tableTitle">주간 상세</h2></div>
       <div class="card scroll">
         <table>
-          <thead><tr><th>주</th><th id="thRev">매출</th><th>건수</th><th>전주 대비</th><th>상황</th></tr></thead>
+          <thead><tr><th id="thPeriod">주</th><th id="thRev">매출</th><th>건수</th><th id="thDelta">전주 대비</th><th>상황</th></tr></thead>
           <tbody id="tbody"></tbody>
         </table>
       </div>
@@ -203,7 +220,7 @@ const fmt=n=>Math.round(n).toLocaleString();
 const isDark=()=>{const t=document.documentElement.getAttribute('data-theme');
   return t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches);};
 
-let D=null, UNIT='만', sel={ch:'all',seg:'전체',met:'매출'};
+let D=null, UNIT='만', sel={ch:'all',seg:'전체',met:'매출',unit:'주',from:'',to:'',preset:''};
 const SEGS=['전체','주말','평일'], METS=['매출','건수'];
 
 // 채널 색 (Okabe-Ito, 색각이상 안전) — 데이터에 색이 없을 때 순서대로 배정
@@ -222,6 +239,121 @@ function chName(id){ if(id==='all') return '종합'; const ch=D.channels.find(c=
 function chList(){ return [{id:'all',name:'종합'}].concat(D.channels); }
 function seriesOf(id){ return D.series[id]||{전체:{r:[],c:[]},주말:{r:[],c:[]},평일:{r:[],c:[]}}; }
 function labelsOf(seg){ const w=D.weeks||{}; return (seg==='주말'?w.weekend:seg==='평일'?w.weekday:w.all)||w.all||[]; }
+
+const DAY=86400000, UNITS=['일','주','월'];
+const pd=s=>new Date(s+'T00:00:00Z'), isoD=d=>d.toISOString().slice(0,10);
+const shift=(s,n)=>isoD(new Date(pd(s).getTime()+n*DAY));
+const monthStart=(s,back)=>{const d=pd(s);return isoD(new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-back,1)));};
+const PRESETS=[
+  ['최근 7일',t=>[shift(t,-6),t]],
+  ['최근 4주',t=>[shift(t,-27),t]],
+  ['이번 달',t=>[monthStart(t,0),t]],
+  ['지난달',t=>[monthStart(t,1),shift(monthStart(t,0),-1)]],
+  ['최근 3개월',t=>[monthStart(t,2),t]],
+  ['최근 12개월',t=>[monthStart(t,11),t]],
+  ['올해',t=>[t.slice(0,4)+'-01-01',t]],
+  ['작년',t=>[(t.slice(0,4)-1)+'-01-01',(t.slice(0,4)-1)+'-12-31']],
+  ['전체',()=>[D.daily.from,D.daily.to]]
+];
+function unitWord(){ return D.daily?{일:'일별',주:'주간',월:'월별'}[sel.unit]:'주간'; }
+function autoUnit(){ const n=(pd(sel.to)-pd(sel.from))/DAY+1; return n<=31?'일':(n<=190?'주':'월'); }
+
+function prevRange(from,to){
+  const a=pd(from), b=pd(to);
+  if(a.getUTCDate()!==1){const len=Math.round((b-a)/DAY)+1;return [shift(from,-len),shift(from,-1),'직전 대비'];}
+  const k=a.getUTCMonth()===0?12:(b.getUTCFullYear()-a.getUTCFullYear())*12+b.getUTCMonth()-a.getUTCMonth()+1;
+  const lastDay=(y,m)=>new Date(Date.UTC(y,m+1,0)).getUTCDate();
+  const endOfMonth=b.getUTCDate()===lastDay(b.getUTCFullYear(),b.getUTCMonth());
+  const pb=new Date(Date.UTC(b.getUTCFullYear(),b.getUTCMonth()-k,1)), py=pb.getUTCFullYear(), pm=pb.getUTCMonth();
+  const day=endOfMonth?lastDay(py,pm):Math.min(b.getUTCDate(),lastDay(py,pm));
+  return [isoD(new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()-k,1))),isoD(new Date(Date.UTC(py,pm,day))),k===12?'작년 대비':'직전 대비'];
+}
+
+function rangeSums(from,to){
+  const dl=D.daily, i0=Math.round((pd(from)-pd(dl.from))/DAY), i1=Math.round((pd(to)-pd(dl.from))/DAY), out={all:[0,0]};
+  D.channels.forEach(c=>{const s=dl.channels[c.id]||{r:[],c:[]};let r=0,n=0;
+    for(let i=Math.max(0,i0);i<=i1;i++){r+=s.r[i]||0;n+=s.c[i]||0;}
+    out[c.id]=[r,n];out.all[0]+=r;out.all[1]+=n;});
+  return out;
+}
+
+function rebuild(){
+  const dl=D.daily, base=pd(dl.from).getTime(), div=D.revenueDivisor||10000, ids=D.channels.map(c=>c.id);
+  const F=pd(sel.from).getTime(), T=pd(sel.to).getTime();
+  const yy=sel.from.slice(0,4)!==sel.to.slice(0,4)?(d=>String(d.getUTCFullYear()).slice(2)+'.'):(()=>'');
+  const md=d=>(d.getUTCMonth()+1)+'/'+d.getUTCDate();
+  const label=p=>{
+    if(sel.unit==='월'){const y=p.a.getUTCFullYear(),m=p.a.getUTCMonth(),m0=Date.UTC(y,m,1),m1=Date.UTC(y,m+1,1)-DAY,a=Math.max(m0,F),b=Math.min(m1,T);
+      return y+'.'+(m+1)+(a===m0&&b===m1?'':'('+new Date(a).getUTCDate()+'~'+new Date(b).getUTCDate()+'일)');}
+    if(+p.a===+p.b) return yy(p.a)+md(p.a);
+    return yy(p.a)+md(p.a)+'~'+(p.a.getUTCMonth()===p.b.getUTCMonth()?p.b.getUTCDate():md(p.b));
+  };
+  const P={전체:[],주말:[],평일:[]};
+  for(let t=F;t<=T;t+=DAY){
+    const d=new Date(t), i=Math.round((t-base)/DAY), w=(d.getUTCDay()+6)%7;
+    const key=sel.unit==='일'?t:(sel.unit==='월'?d.getUTCFullYear()*12+d.getUTCMonth():t-w*DAY);
+    ['전체',w>=4?'주말':'평일'].forEach(seg=>{
+      const L=P[seg];let p=L[L.length-1];
+      if(!p||p.key!==key){p={key,a:d,b:d,v:{}};ids.forEach(id=>p.v[id]=[0,0]);L.push(p);}
+      p.b=d;
+      ids.forEach(id=>{const s=dl.channels[id];if(s){p.v[id][0]+=s.r[i]||0;p.v[id][1]+=s.c[i]||0;}});
+    });
+  }
+  const isFull=(p,seg)=>{
+    if(sel.unit==='일') return true;
+    if(sel.unit==='월'){const y=p.a.getUTCFullYear(),m=p.a.getUTCMonth();return Date.UTC(y,m,1)>=F&&Date.UTC(y,m+1,1)-DAY<=T;}
+    return Math.round((p.b-p.a)/DAY)+1===(seg==='전체'?7:(seg==='주말'?3:4));
+  };
+  const tot=(p,id)=>id==='all'?ids.reduce((a,k)=>[a[0]+p.v[k][0],a[1]+p.v[k][1]],[0,0]):p.v[id];
+  D.weeks={all:P['전체'].map(label),weekend:P['주말'].map(label),weekday:P['평일'].map(label)};
+  D.partial={};SEGS.forEach(seg=>{D.partial[seg]=P[seg].map(p=>!isFull(p,seg));});
+  D.series={};
+  ids.concat('all').forEach(id=>{D.series[id]={};
+    SEGS.forEach(seg=>{D.series[id][seg]={r:P[seg].map(p=>Math.round(tot(p,id)[0]/div)),c:P[seg].map(p=>tot(p,id)[1])};});});
+
+  const cur=rangeSums(sel.from,sel.to), len=Math.round((T-F)/DAY)+1;
+  const [pFrom,pTo,pWord]=prevRange(sel.from,sel.to), prev=pFrom>=dl.from?rangeSums(pFrom,pTo):null;
+  D.tiles=['all'].concat(ids).map(id=>{
+    const [r,n]=cur[id];let chip='',tone='flat';
+    if(prev&&prev[id][0]){const g=Math.round((r-prev[id][0])/prev[id][0]*100);chip=pWord+' '+(g>0?'+':'')+g+'%';tone=g>0?'up':(g<0?'down':'flat');}
+    return {k:id==='all'?'종합 매출':chName(id),v:fmt(r/div)+UNIT,
+      d:fmt(n)+'건'+(id==='all'?'':' · 비중 '+(cur.all[0]?Math.round(r/cur.all[0]*100):0)+'%'),chip,chipTone:tone};
+  });
+  $('#rangeNote').textContent=`${sel.from} ~ ${sel.to} (${len}일)`+(prev?` · ${pWord} 기준: ${pFrom} ~ ${pTo}`:'')+` · 자료는 ${dl.to}까지 · 흐린 막대는 기간 일부만 포함`;
+}
+
+function buildRangeBtns(){
+  mkBtns($('#presetBtns'),PRESETS.map(p=>({t:p[0],v:p[0]})),'preset',false,applyPreset);
+  mkBtns($('#unitBtns'),UNITS.map(k=>({t:k+'별',v:k})),'unit',false,()=>applyRange(true));
+}
+function updateRange(keepUnit){
+  const dl=D.daily, clamp=s=>s<dl.from?dl.from:(s>dl.to?dl.to:s);
+  let a=clamp($('#fromDate').value||dl.from), b=clamp($('#toDate').value||dl.to);
+  if(a>b)[a,b]=[b,a];
+  sel.from=a;sel.to=b;
+  if(document.activeElement!==$('#fromDate')) $('#fromDate').value=a;
+  if(document.activeElement!==$('#toDate')) $('#toDate').value=b;
+  if(!keepUnit) sel.unit=autoUnit();
+  rebuild();renderTiles();buildRangeBtns();
+  $('#subtitle').textContent=[sel.from+' ~ '+sel.to,unitWord()+' 기준',D.weekdayRule||'주말=금~일, 평일=월~목',D.source||''].filter(Boolean).join(' · ');
+  $('#stackSub').textContent=unitWord()+' 전체 매출을 채널이 어떻게 나눠 갖는가 ('+UNIT+')';
+}
+function applyRange(keepUnit){ updateRange(keepUnit); renderAll(); }
+function applyPreset(){
+  const p=PRESETS.find(x=>x[0]===sel.preset); if(!p) return;
+  const [a,b]=p[1](D.daily.to); $('#fromDate').value=a; $('#toDate').value=b; applyRange(false);
+}
+function initRange(){
+  const dl=D.daily;
+  $('#rangeSec').classList.remove('hidden');
+  ['#fromDate','#toDate'].forEach(s=>{const el=$(s);el.min=dl.from;el.max=dl.to;
+    el.onchange=()=>{sel.preset='';applyRange(false);};
+    el.onblur=()=>{el.value=s==='#fromDate'?sel.from:sel.to;};});
+  sel.preset='최근 3개월';
+  const [a,b]=PRESETS.find(x=>x[0]===sel.preset)[1](dl.to);
+  $('#fromDate').value=a;$('#toDate').value=b;
+  updateRange(false);
+}
 
 function unlock(d){
   if(!d.enc) return d;
@@ -261,11 +393,7 @@ function setup(){
     if(D.verdict.tone==='bad')$('#verdictMark').style.background='var(--bad)';
     else if(D.verdict.tone==='warn')$('#verdictMark').style.background='var(--warn)';}
   // tiles
-  if(Array.isArray(D.tiles)&&D.tiles.length){$('#tilesSec').classList.remove('hidden');
-    $('#tiles').innerHTML=D.tiles.map(t=>{
-      const chip=t.chip?('<span class="chip '+(t.chipTone||'flat')+'">'+t.chip+'</span>'):'';
-      return '<div class="tile"><div class="k">'+(t.k||'')+'</div><div class="v">'+(t.v||'')+'</div>'+
-             '<div class="d">'+(t.d||'')+' '+chip+'</div></div>';}).join('');}
+  renderTiles();
   // footnote
   if(D.footnote){$('#footSec').classList.remove('hidden');$('#footnote').innerHTML=D.footnote;}
   // holiday (optional)
@@ -273,6 +401,7 @@ function setup(){
   else{if(D.holiday.title)$('#holiTitle').textContent=D.holiday.title;
     $('#holiSub').textContent=D.holiday.sub||'';}
   $('#stackSub').textContent=D.stackSub||('주간 전체 매출을 채널이 어떻게 나눠 갖는가 ('+UNIT+')');
+  if(D.daily) initRange();
 
   buildBtns();
   $('#loading').classList.add('hidden');
@@ -280,7 +409,16 @@ function setup(){
   renderAll();
 }
 
-function mkBtns(host,items,key,withDot){
+function renderTiles(){
+  if(!(Array.isArray(D.tiles)&&D.tiles.length)) return;
+  $('#tilesSec').classList.remove('hidden');
+  $('#tiles').innerHTML=D.tiles.map(t=>{
+    const chip=t.chip?('<span class="chip '+(t.chipTone||'flat')+'">'+t.chip+'</span>'):'';
+    return '<div class="tile"><div class="k">'+(t.k||'')+'</div><div class="v">'+(t.v||'')+'</div>'+
+           '<div class="d">'+(t.d||'')+' '+chip+'</div></div>';}).join('');
+}
+
+function mkBtns(host,items,key,withDot,after){
   host.innerHTML='';
   items.forEach(it=>{
     const b=document.createElement('button');b.className='btn'+(withDot?' dot':'');b.type='button';
@@ -288,7 +426,7 @@ function mkBtns(host,items,key,withDot){
     if(withDot){const i=document.createElement('i');i.style.background=it.col||'var(--accent)';b.appendChild(i);}
     b.appendChild(document.createTextNode(it.t));
     b.onclick=()=>{sel[key]=it.v;[...host.children].forEach(c=>c.setAttribute('aria-pressed','false'));
-      b.setAttribute('aria-pressed','true');render();};
+      b.setAttribute('aria-pressed','true');(after||render)();};
     host.appendChild(b);
   });
 }
@@ -323,11 +461,14 @@ function renderMain(){
     s+=`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/>`;
     s+=`<text class="axis-y" x="${padL-7}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`;}
   s+=`<line class="baseline" x1="${padL}" y1="${padT+ih}" x2="${W-padR}" y2="${padT+ih}"/>`;
+  const part=(D.partial&&D.partial[sel.seg])||[];
+  const lw=Math.max(0,...labels.slice(0,vals.length).map(l=>String(l||'').length))*6.2+10;
+  const step=Math.max(1,Math.ceil(vals.length*lw/iw));
   vals.forEach((v,i)=>{
     const bx=x(i)-bw/2, by=y(v), bh=padT+ih-by;
-    s+=`<rect data-i="${i}" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="4" fill="${col}"></rect>`;
-    s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(by-6).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`;
-    s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+16).toFixed(1)}" text-anchor="middle">${labels[i]||''}</text>`;
+    s+=`<rect data-i="${i}" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="${bw<8?1:4}" fill="${col}"${part[i]?' opacity="0.45"':''}></rect>`;
+    if(vals.length<=16) s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(by-6).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`;
+    if(i%step===0) s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+16).toFixed(1)}" text-anchor="middle">${labels[i]||''}</text>`;
     if(situ&&situ[i]){const st=situ[i].length>8?situ[i].slice(0,8)+'…':situ[i];
       s+=`<text class="situ" x="${x(i).toFixed(1)}" y="${(padT+ih+32).toFixed(1)}" text-anchor="middle">${st}</text>`;}
   });
@@ -336,11 +477,11 @@ function renderMain(){
   const svg=$('#mainChart');
   svg.querySelectorAll('rect[data-i]').forEach(r=>{
     const i=+r.dataset.i;r.style.cursor='pointer';
-    r.addEventListener('mousemove',e=>showTip(e,`<div>${labels[i]||''} · ${chName(sel.ch)} ${sel.seg}</div><div class="t2">${sel.met} ${fmt(vals[i])}${unit}${situ&&situ[i]?' · '+situ[i]:''}</div>`));
+    r.addEventListener('mousemove',e=>showTip(e,`<div>${labels[i]||''}${part[i]?' (일부 기간)':''} · ${chName(sel.ch)} ${sel.seg}</div><div class="t2">${sel.met} ${fmt(vals[i])}${unit}${situ&&situ[i]?' · '+situ[i]:''}</div>`));
     r.addEventListener('mouseleave',hideTip);
   });
   $('#mainTitle').textContent=`${chName(sel.ch)} · ${sel.seg} · ${sel.met}`;
-  $('#mainSub').textContent=`${sel.seg} 기준 주간 추이 (${sel.met==='매출'?UNIT:'건'})`;
+  $('#mainSub').textContent=`${sel.seg} 기준 ${unitWord()} 추이 (${sel.met==='매출'?UNIT:'건'})`;
 }
 
 function renderStack(){
@@ -348,7 +489,8 @@ function renderStack(){
   const weeks=labelsOf('전체');
   const W=440,H=280,padL=40,padR=10,padT=10,padB=58;
   const iw=W-padL-padR, ih=H-padT-padB;
-  const totals=weeks.map((_,i)=>chs.reduce((a,c)=>a+((seriesOf(c.id)['전체'].r[i])||0),0));
+  const allR=(D.series.all&&D.series.all['전체'].r)||[];
+  const totals=weeks.map((_,i)=>allR[i]!=null?allR[i]:chs.reduce((a,c)=>a+((seriesOf(c.id)['전체'].r[i])||0),0));
   const max=(Math.max(...totals,0)||1)*1.1;
   const x=i=>padL+(iw/weeks.length)*(i+0.5);
   const bw=Math.min(34,(iw/weeks.length)*0.6);
@@ -358,15 +500,17 @@ function renderStack(){
     s+=`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/>`;
     s+=`<text class="axis-y" x="${padL-6}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`;}
   s+=`<line class="baseline" x1="${padL}" y1="${padT+ih}" x2="${W-padR}" y2="${padT+ih}"/>`;
+  const step=Math.ceil(weeks.length/13);
+  const part=(D.partial&&D.partial['전체'])||[];
   weeks.forEach((w,i)=>{
     let acc=0;
     chs.forEach(c=>{
       const v=(seriesOf(c.id)['전체'].r[i])||0;const yTop=y(acc+v), hBar=(v/max)*ih;
-      s+=`<rect data-w="${i}" data-k="${c.id}" data-v="${v}" x="${(x(i)-bw/2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw}" height="${Math.max(0,hBar-2).toFixed(1)}" rx="2.5" fill="${chColor(c.id)}"></rect>`;
+      s+=`<rect data-w="${i}" data-k="${c.id}" data-v="${v}" x="${(x(i)-bw/2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw}" height="${Math.max(0,hBar-2).toFixed(1)}" rx="2.5" fill="${chColor(c.id)}"${part[i]?' opacity="0.45"':''}></rect>`;
       acc+=v;
     });
-    s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+15).toFixed(1)}" text-anchor="middle" transform="rotate(32 ${x(i).toFixed(1)} ${(padT+ih+15).toFixed(1)})">${w}</text>`;
-    s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(y(totals[i])-5).toFixed(1)}" text-anchor="middle" font-size="10">${fmt(totals[i])}</text>`;
+    if(i%step===0) s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+15).toFixed(1)}" text-anchor="middle" transform="rotate(32 ${x(i).toFixed(1)} ${(padT+ih+15).toFixed(1)})">${w}</text>`;
+    if(step===1) s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(y(totals[i])-5).toFixed(1)}" text-anchor="middle" font-size="10">${fmt(totals[i])}</text>`;
   });
   s+=`</svg>`;
   $('#stackChart').outerHTML=s.replace('<svg ','<svg id="stackChart" ');
@@ -422,14 +566,17 @@ function renderTable(){
   const d=seriesOf(sel.ch)[sel.seg]||{r:[],c:[]};
   const labels=labelsOf(sel.seg);
   const situ=(sel.seg==='전체'&&D.situations)?D.situations:null;
+  const part=(D.partial&&D.partial[sel.seg])||[];
   let rows='';
   d.r.forEach((rv,i)=>{
     let delta='—',cls='';
-    if(i>0&&d.r[i-1]){const p=((rv-d.r[i-1])/d.r[i-1]*100);delta=(p>=0?'+':'')+p.toFixed(0)+'%';cls=p>0?'pos':(p<0?'neg':'');}
+    if(i>0&&d.r[i-1]&&!part[i]&&!part[i-1]){const p=((rv-d.r[i-1])/d.r[i-1]*100);delta=(p>=0?'+':'')+p.toFixed(0)+'%';cls=p>0?'pos':(p<0?'neg':'');}
     rows+=`<tr><td>${labels[i]||''}</td><td>${fmt(rv)}</td><td>${fmt(d.c[i]||0)}</td><td class="${cls}">${delta}</td><td class="situcell">${situ&&situ[i]?situ[i]:''}</td></tr>`;
   });
   $('#tbody').innerHTML=rows;
-  $('#tableTitle').textContent=`주간 상세 — ${chName(sel.ch)} · ${sel.seg}`;
+  $('#tableTitle').textContent=`${unitWord()} 상세 — ${chName(sel.ch)} · ${sel.seg}`;
+  $('#thPeriod').textContent={일별:'날짜',주간:'주',월별:'월'}[unitWord()];
+  $('#thDelta').textContent={일별:'전일 대비',주간:'전주 대비',월별:'전월 대비'}[unitWord()];
 }
 
 function render(){renderMain();renderTable();}
