@@ -447,7 +447,7 @@ function renderReferral(){
   const F=R.funnel||{visits:0,joins:0,orders:0,revenue:0};
   $('#refSec').classList.remove('hidden');
   $('#refTitle').textContent=R.title||'추천 캠페인 퍼널';
-  $('#refNote').textContent=R.from+' ~ '+R.to+(R.updatedAt?' · '+R.updatedAt+' 기준':'');
+  $('#refNote').textContent=R.from+' ~ '+R.to+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
   $('#refTiles').innerHTML=[
     tile('링크 유입',fmt(F.visits)+'회',R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문'),
     tile('가입',fmt(F.joins)+'명','유입 대비 '+pct(F.joins,F.visits)),
