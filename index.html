@@ -111,6 +111,9 @@
   .situcell{color:var(--muted);font-size:11.5px}
 
   .mini{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .refcard{padding:14px 16px;margin-top:12px}
+  .refcard .tile{box-shadow:none;background:var(--card2)}
+  .refcard .chart-sub{margin-bottom:10px}
   .footnote{font-size:12px;color:var(--muted);line-height:1.7;padding:2px 4px}
   .footnote b{color:var(--ink2)}
   #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
@@ -140,6 +143,23 @@
   <div id="error" class="state hidden"></div>
 
   <main id="app" class="hidden">
+    <section id="refSec" class="hidden">
+      <div class="sec-h"><h2 id="refTitle">추천 캠페인 퍼널</h2><span class="note" id="refNote"></span></div>
+      <div class="tiles" id="refTiles"></div>
+      <div class="card refcard">
+        <div class="chart-title">추천 적립금 기록 (카페24 공식)</div>
+        <div class="chart-sub" id="refOfficialSub"></div>
+        <div class="tiles" id="refOfficial"></div>
+      </div>
+      <div class="card scroll" style="margin-top:12px">
+        <table>
+          <thead><tr><th>날짜</th><th>유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead>
+          <tbody id="refBody"></tbody>
+        </table>
+      </div>
+      <div class="footnote" id="refFoot" style="margin-top:8px"></div>
+    </section>
+
     <section id="rangeSec" class="hidden">
       <div class="card">
         <div class="filters">
@@ -394,6 +414,7 @@ function setup(){
     else if(D.verdict.tone==='warn')$('#verdictMark').style.background='var(--warn)';}
   // tiles
   renderTiles();
+  renderReferral();
   // footnote
   if(D.footnote){$('#footSec').classList.remove('hidden');$('#footnote').innerHTML=D.footnote;}
   // holiday (optional)
@@ -416,6 +437,41 @@ function renderTiles(){
     const chip=t.chip?('<span class="chip '+(t.chipTone||'flat')+'">'+t.chip+'</span>'):'';
     return '<div class="tile"><div class="k">'+(t.k||'')+'</div><div class="v">'+(t.v||'')+'</div>'+
            '<div class="d">'+(t.d||'')+' '+chip+'</div></div>';}).join('');
+}
+
+function renderReferral(){
+  const R=D.referral; if(!R) return;
+  const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+  const pct=(a,b)=>b?(a/b*100).toFixed(1)+'%':'—';
+  const tile=(k,v,d)=>'<div class="tile"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div><div class="d">'+esc(d)+'</div></div>';
+  const F=R.funnel||{visits:0,joins:0,orders:0,revenue:0};
+  $('#refSec').classList.remove('hidden');
+  $('#refTitle').textContent=R.title||'추천 캠페인 퍼널';
+  $('#refNote').textContent=R.from+' ~ '+R.to+(R.updatedAt?' · '+R.updatedAt+' 기준':'');
+  $('#refTiles').innerHTML=[
+    tile('링크 유입',fmt(F.visits)+'회',R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문'),
+    tile('가입',fmt(F.joins)+'명','유입 대비 '+pct(F.joins,F.visits)),
+    tile('구매',fmt(F.orders)+'건','유입 대비 '+pct(F.orders,F.visits)),
+    tile('매출',fmt(F.revenue)+'원',F.orders?'구매 1건당 '+fmt(F.revenue/F.orders)+'원':'아직 구매 없음')
+  ].join('');
+  const O=R.official||{status:'needs_scope'};
+  if(O.status==='ok'){
+    $('#refOfficialSub').textContent='친구가 실제로 산 주문마다 카페24가 추천인에게 남기는 감사 적립금 기록입니다. 링크를 거치지 않고 추천인 아이디를 직접 넣은 가입도 포함됩니다.';
+    $('#refOfficial').innerHTML=[
+      tile('추천 구매',fmt(O.orders)+'건','취소된 주문 제외'),
+      tile('구매한 친구',fmt(O.referees)+'명','서로 다른 회원 수'),
+      tile('그 주문 매출',fmt(O.revenue)+'원','적립금 사용분 포함 결제액'),
+      tile('추천인 적립금',fmt(O.granted)+'원','지급 대기 '+fmt(O.pending)+'원')
+    ].join('');
+  } else {
+    $('#refOfficial').innerHTML='';
+    $('#refOfficialSub').textContent=O.status==='needs_scope'
+      ?'카페24 연결에 적립금 읽기 권한이 없어 아직 못 가져옵니다. 권한을 추가하면 다음 갱신부터 이 칸이 자동으로 채워집니다.'
+      :'이번 갱신에서 적립금 기록을 못 읽었습니다 — '+(O.message||'');
+  }
+  const d=R.daily||{dates:[]};
+  $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(d.visits[i])+'</td><td>'+fmt(d.joins[i])+'</td><td>'+fmt(d.orders[i])+'</td><td>'+fmt(d.revenue[i])+'</td></tr>').reverse().join('');
+  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.error?'<br><b>알림</b> — '+esc(R.error):'');
 }
 
 function mkBtns(host,items,key,withDot,after){
