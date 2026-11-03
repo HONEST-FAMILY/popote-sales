@@ -455,7 +455,7 @@ function renderReferral(){
   const F=R.funnel||{visits:0,joins:0,orders:0,revenue:0};
   $('#refSec').classList.remove('hidden');
   $('#refTitle').textContent=R.title||'추천 캠페인 퍼널';
-  $('#refNote').textContent=R.from+' ~ '+R.to+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
+  $('#refNote').textContent=(R.to<R.from?R.from+'부터 셉니다 · 아직 시작 전':R.from+' ~ '+R.to)+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
   $('#refLive').classList.toggle('hidden',!R.liveUrl);
   $('#refLive').onclick=liveLookup;
   $('#refTiles').innerHTML=[
@@ -469,7 +469,7 @@ function renderReferral(){
   if(hasTest) $('#refTest').textContent='시험 링크('+R.testSource+') 결과 — 유입 '+fmt(T.visits)+'회 · 가입 '+fmt(T.joins)+'명 · 구매 '+fmt(T.orders)+'건 · 매출 '+fmt(T.revenue)+'원 · 위 숫자에는 안 섞임';
   const O=R.official||{status:'needs_scope'};
   if(O.status==='ok'){
-    $('#refOfficialSub').textContent='친구가 실제로 산 주문마다 카페24가 추천인에게 남기는 감사 적립금 기록입니다. 링크를 거치지 않고 추천인 아이디를 직접 넣은 가입도 포함됩니다.';
+    $('#refOfficialSub').textContent='친구 주문이 배송완료된 뒤 관리자가 추천인에게 3천원을 지급하면 카페24가 남기는 감사 적립금 기록입니다. 그래서 위 구매보다 며칠 늦게 오르고, 지급하지 않으면 계속 0입니다. 링크를 거치지 않고 추천인 아이디를 직접 넣은 가입도 포함됩니다.';
     $('#refOfficial').innerHTML=[
       tile('추천 구매',fmt(O.orders)+'건','취소된 주문 제외'),
       tile('구매한 친구',fmt(O.referees)+'명','서로 다른 회원 수'),
