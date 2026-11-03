@@ -462,7 +462,7 @@ function renderReferral(){
     tile('링크 유입',fmt(F.visits)+'회',R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문'),
     tile('가입',fmt(F.joins)+'명',(R.joinSource==='direct'?'가입 완료 화면 기준 · ':'')+'유입 대비 '+pct(F.joins,F.visits)),
     tile('구매',fmt(F.orders)+'건','결제·입금 완료 기준 · 유입 대비 '+pct(F.orders,F.visits)),
-    tile('매출',fmt(F.revenue)+'원',F.orders?'취소·환불돼도 안 빠짐 · 1건당 '+fmt(F.revenue/F.orders)+'원':'아직 구매 없음')
+    tile('매출',fmt(F.revenue)+'원',F.orders?'취소·환불돼도 바로 안 빠짐 · 1건당 '+fmt(F.revenue/F.orders)+'원':'아직 구매 없음')
   ].join('');
   const T=R.test, hasTest=!!(R.testSource&&T&&(T.visits||T.joins||T.orders||T.revenue));
   $('#refTest').classList.toggle('hidden',!hasTest);
@@ -484,7 +484,7 @@ function renderReferral(){
   }
   const d=R.daily||{dates:[]};
   $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(d.visits[i])+'</td><td>'+fmt(d.joins[i])+'</td><td>'+fmt(d.orders[i])+'</td><td>'+fmt(d.revenue[i])+'</td></tr>').reverse().join('');
-  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.liveUrl?' 제목 옆 <b>지금 조회</b>는 오늘 숫자만 카페24에서 그 자리에서 다시 받습니다.':'')+(R.joinSource==='direct'?' 가입은 추천 링크로 들어온 브라우저가 가입 완료 화면에 도착한 수를 우리가 직접 셉니다(11/3 저녁부터, 카페24 통계는 가입을 늦고 일부만 세서 쓰지 않음).':' 가입·구매·매출은 카페24 통계가 정리한 뒤에 올라 유입보다 늦고, 가입은 실제보다 적게 나오기도 합니다(11/2 실측: 실제 가입 11명 중 통계 8명).')+' 구매·매출은 카페24 통계 기준이라 결제가 끝난 때(무통장은 입금 확인 때) 잡히고, 주문이 취소·환불돼도 빠지지 않습니다. 취소를 뺀 숫자는 위 적립금 기록 칸에서 봅니다.'+' 추천으로 가입했는지는 카페24 관리자 &gt; 프로모션 &gt; 리워드 프로그램 관리 &gt; 추천인 관리에서 바로 확인됩니다.'+(R.error?'<br><b>알림</b> — '+esc(R.error):'')+(R.directError?'<br><b>알림</b> — 가입 직접 집계를 못 받아 카페24 통계 가입을 보여 줍니다: '+esc(R.directError):'');
+  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.liveUrl?' 제목 옆 <b>지금 조회</b>는 오늘 숫자만 카페24에서 그 자리에서 다시 받습니다.':'')+(R.joinSource==='direct'?' 가입은 추천 링크로 들어온 브라우저가 가입 완료 화면에 도착한 수를 우리가 직접 셉니다(11/3 저녁부터, 카페24 통계는 가입을 늦고 일부만 세서 쓰지 않음).':' 가입·구매·매출은 카페24 통계가 정리한 뒤에 올라 유입보다 늦고, 가입은 실제보다 적게 나오기도 합니다(11/2 실측: 실제 가입 11명 중 통계 8명).')+' 구매·매출은 카페24 통계 기준이라 결제가 끝난 때(무통장은 입금 확인 때) 잡히고, 주문이 취소·환불돼도 바로 빠지지 않습니다. 취소를 뺀 숫자는 위 적립금 기록 칸에서 봅니다.'+' 추천으로 가입했는지는 카페24 관리자 &gt; 프로모션 &gt; 리워드 프로그램 관리 &gt; 추천인 관리에서 바로 확인됩니다.'+(R.error?'<br><b>알림</b> — '+esc(R.error):'')+(R.directError?'<br><b>알림</b> — 가입 직접 집계를 못 받아 카페24 통계 가입을 보여 줍니다: '+esc(R.directError):'');
 }
 
 function liveToken(){
@@ -521,7 +521,7 @@ function liveLookup(){
     .then(L=>{
       if(R.from&&L.date<R.from){msg.textContent='캠페인 시작일('+R.from+') 전이라 바꿀 숫자가 없습니다.';return;}
       applyLive(L);
-      msg.textContent=String(L.checkedAt).slice(11)+'에 바로 받은 오늘 숫자입니다. '+(R.joinSource==='direct'?'가입은 가입 완료 화면에 도착하는 즉시 오르고, 구매·매출은 카페24 통계라 결제(무통장은 입금 확인) 뒤에 오르며 취소돼도 빠지지 않습니다.':'유입은 몇 분 안에 오르지만 가입·구매는 카페24 통계가 더 늦게 정리합니다. 추천 가입 여부는 카페24 관리자 추천인 관리에서 바로 보입니다.');})
+      msg.textContent=String(L.checkedAt).slice(11)+'에 바로 받은 오늘 숫자입니다. '+(R.joinSource==='direct'?'가입은 가입 완료 화면에 도착하는 즉시 오르고, 구매·매출은 카페24 통계라 결제(무통장은 입금 확인) 뒤에 오르며 취소돼도 바로 빠지지 않습니다.':'유입은 몇 분 안에 오르지만 가입·구매는 카페24 통계가 더 늦게 정리합니다. 추천 가입 여부는 카페24 관리자 추천인 관리에서 바로 보입니다.');})
     .catch(e=>{msg.className='reflive bad';
       msg.textContent=e&&e.message&&!/fetch|network|load failed/i.test(e.message)?e.message:'바로 조회 서버에 연결하지 못했습니다. 잠시 뒤 다시 눌러 주세요.';})
     .finally(()=>{b.disabled=false;b.textContent='지금 조회';});
