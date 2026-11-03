@@ -521,7 +521,7 @@ function liveLookup(){
     .then(L=>{
       if(R.from&&L.date<R.from){msg.textContent='캠페인 시작일('+R.from+') 전이라 바꿀 숫자가 없습니다.';return;}
       applyLive(L);
-      msg.textContent=String(L.checkedAt).slice(11)+'에 카페24에서 바로 받은 오늘 숫자입니다. 유입은 몇 분 안에 오르지만 가입·구매는 카페24 통계가 더 늦게 정리합니다. 추천 가입 여부는 카페24 관리자 추천인 관리에서 바로 보입니다.';})
+      msg.textContent=String(L.checkedAt).slice(11)+'에 바로 받은 오늘 숫자입니다. '+(R.joinSource==='direct'?'가입은 가입 완료 화면에 도착하는 즉시 오르고, 구매·매출은 카페24 통계라 늦게 오릅니다.':'유입은 몇 분 안에 오르지만 가입·구매는 카페24 통계가 더 늦게 정리합니다. 추천 가입 여부는 카페24 관리자 추천인 관리에서 바로 보입니다.');})
     .catch(e=>{msg.className='reflive bad';
       msg.textContent=e&&e.message&&!/fetch|network|load failed/i.test(e.message)?e.message:'바로 조회 서버에 연결하지 못했습니다. 잠시 뒤 다시 눌러 주세요.';})
     .finally(()=>{b.disabled=false;b.textContent='지금 조회';});
