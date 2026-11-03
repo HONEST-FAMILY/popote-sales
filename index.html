@@ -115,6 +115,11 @@
   .refcard .tile{box-shadow:none;background:var(--card2)}
   .refcard .chart-sub{margin-bottom:10px}
   .reftest{margin-top:10px;padding:9px 13px;border:1px dashed var(--line);border-radius:10px;font-size:12.5px;color:var(--ink2)}
+  .refctl{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
+  .refctl .btn{padding:5px 12px;font-size:12.5px}
+  .refctl .btn:disabled{opacity:.6;cursor:default}
+  .reflive{margin:-4px 2px 11px;font-size:12px;color:var(--muted)}
+  .reflive.bad{color:var(--bad);font-weight:650}
   .footnote{font-size:12px;color:var(--muted);line-height:1.7;padding:2px 4px}
   .footnote b{color:var(--ink2)}
   #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
@@ -145,7 +150,8 @@
 
   <main id="app" class="hidden">
     <section id="refSec" class="hidden">
-      <div class="sec-h"><h2 id="refTitle">추천 캠페인 퍼널</h2><span class="note" id="refNote"></span></div>
+      <div class="sec-h"><h2 id="refTitle">추천 캠페인 퍼널</h2><div class="refctl"><span class="note" id="refNote"></span><button class="btn hidden" id="refLive" type="button">지금 조회</button></div></div>
+      <div class="reflive hidden" id="refLiveMsg"></div>
       <div class="tiles" id="refTiles"></div>
       <div class="reftest hidden" id="refTest"></div>
       <div class="card refcard">
@@ -450,6 +456,8 @@ function renderReferral(){
   $('#refSec').classList.remove('hidden');
   $('#refTitle').textContent=R.title||'추천 캠페인 퍼널';
   $('#refNote').textContent=R.from+' ~ '+R.to+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
+  $('#refLive').classList.toggle('hidden',!R.liveUrl);
+  $('#refLive').onclick=liveLookup;
   $('#refTiles').innerHTML=[
     tile('링크 유입',fmt(F.visits)+'회',R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문'),
     tile('가입',fmt(F.joins)+'명','유입 대비 '+pct(F.joins,F.visits)),
@@ -476,7 +484,46 @@ function renderReferral(){
   }
   const d=R.daily||{dates:[]};
   $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(d.visits[i])+'</td><td>'+fmt(d.joins[i])+'</td><td>'+fmt(d.orders[i])+'</td><td>'+fmt(d.revenue[i])+'</td></tr>').reverse().join('');
-  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.error?'<br><b>알림</b> — '+esc(R.error):'');
+  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.liveUrl?' 제목 옆 <b>지금 조회</b>는 오늘 숫자만 카페24에서 그 자리에서 다시 받습니다.':'')+(R.error?'<br><b>알림</b> — '+esc(R.error):'');
+}
+
+function liveToken(){
+  const k=new URLSearchParams(location.hash.slice(1)).get('k');
+  if(!k) return Promise.reject(new Error('링크에 열쇠(#k=)가 없습니다. 받은 링크 전체를 그대로 여세요.'));
+  const bin=s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),ch=>ch.charCodeAt(0));
+  return crypto.subtle.importKey('raw',bin(k),{name:'HMAC',hash:'SHA-256'},false,['sign'])
+    .then(key=>crypto.subtle.sign('HMAC',key,new TextEncoder().encode('referral-live')))
+    .then(sig=>btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''));
+}
+
+function applyLive(L){
+  const R=D.referral, M=['visits','joins','orders','revenue'];
+  const d=R.daily=R.daily||{dates:[],visits:[],joins:[],orders:[],revenue:[]};
+  const t=R.testDaily=R.testDaily||{visits:d.dates.map(()=>0),joins:d.dates.map(()=>0),orders:d.dates.map(()=>0),revenue:d.dates.map(()=>0)};
+  let i=d.dates.indexOf(L.date);
+  if(i<0){i=d.dates.findIndex(x=>x>L.date);if(i<0)i=d.dates.length;d.dates.splice(i,0,L.date);M.forEach(m=>{d[m].splice(i,0,0);t[m].splice(i,0,0);});}
+  M.forEach(m=>{d[m][i]=(L.real||{})[m]||0;t[m][i]=(L.test||{})[m]||0;});
+  const sum=a=>a.reduce((s,x)=>s+(+x||0),0);
+  R.funnel={};R.test={};M.forEach(m=>{R.funnel[m]=sum(d[m]);R.test[m]=sum(t[m]);});
+  if(!R.to||L.date>R.to)R.to=L.date;
+  R.updatedAt=L.checkedAt+' 바로 조회';
+  renderReferral();
+}
+
+function liveLookup(){
+  const R=D.referral, b=$('#refLive'), msg=$('#refLiveMsg');
+  b.disabled=true;b.textContent='조회 중…';
+  msg.className='reflive';msg.textContent='카페24에서 오늘 숫자를 받는 중입니다…';
+  liveToken()
+    .then(token=>fetch(R.liveUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token}),cache:'no-store'}))
+    .then(r=>r.json().catch(()=>({})).then(body=>{if(!r.ok)throw new Error(body.error||('바로 조회를 하지 못했습니다 ('+r.status+')'));return body;}))
+    .then(L=>{
+      if(R.from&&L.date<R.from){msg.textContent='캠페인 시작일('+R.from+') 전이라 바꿀 숫자가 없습니다.';return;}
+      applyLive(L);
+      msg.textContent=String(L.checkedAt).slice(11)+'에 카페24에서 바로 받은 오늘 숫자입니다. 방금 한 가입·구매는 카페24 통계에 몇 분 늦게 잡힐 수 있어요.';})
+    .catch(e=>{msg.className='reflive bad';
+      msg.textContent=e&&e.message&&!/fetch|network|load failed/i.test(e.message)?e.message:'바로 조회 서버에 연결하지 못했습니다. 잠시 뒤 다시 눌러 주세요.';})
+    .finally(()=>{b.disabled=false;b.textContent='지금 조회';});
 }
 
 function mkBtns(host,items,key,withDot,after){
