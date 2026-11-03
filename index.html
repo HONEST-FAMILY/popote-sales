@@ -114,6 +114,7 @@
   .refcard{padding:14px 16px;margin-top:12px}
   .refcard .tile{box-shadow:none;background:var(--card2)}
   .refcard .chart-sub{margin-bottom:10px}
+  .reftest{margin-top:10px;padding:9px 13px;border:1px dashed var(--line);border-radius:10px;font-size:12.5px;color:var(--ink2)}
   .footnote{font-size:12px;color:var(--muted);line-height:1.7;padding:2px 4px}
   .footnote b{color:var(--ink2)}
   #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
@@ -146,6 +147,7 @@
     <section id="refSec" class="hidden">
       <div class="sec-h"><h2 id="refTitle">추천 캠페인 퍼널</h2><span class="note" id="refNote"></span></div>
       <div class="tiles" id="refTiles"></div>
+      <div class="reftest hidden" id="refTest"></div>
       <div class="card refcard">
         <div class="chart-title">추천 적립금 기록 (카페24 공식)</div>
         <div class="chart-sub" id="refOfficialSub"></div>
@@ -454,6 +456,9 @@ function renderReferral(){
     tile('구매',fmt(F.orders)+'건','유입 대비 '+pct(F.orders,F.visits)),
     tile('매출',fmt(F.revenue)+'원',F.orders?'구매 1건당 '+fmt(F.revenue/F.orders)+'원':'아직 구매 없음')
   ].join('');
+  const T=R.test, hasTest=!!(R.testSource&&T&&(T.visits||T.joins||T.orders||T.revenue));
+  $('#refTest').classList.toggle('hidden',!hasTest);
+  if(hasTest) $('#refTest').textContent='시험 링크('+R.testSource+') 결과 — 유입 '+fmt(T.visits)+'회 · 가입 '+fmt(T.joins)+'명 · 구매 '+fmt(T.orders)+'건 · 매출 '+fmt(T.revenue)+'원 · 위 숫자에는 안 섞임';
   const O=R.official||{status:'needs_scope'};
   if(O.status==='ok'){
     $('#refOfficialSub').textContent='친구가 실제로 산 주문마다 카페24가 추천인에게 남기는 감사 적립금 기록입니다. 링크를 거치지 않고 추천인 아이디를 직접 넣은 가입도 포함됩니다.';
