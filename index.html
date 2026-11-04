@@ -127,6 +127,12 @@
   .refctl .btn:disabled{opacity:.6;cursor:default}
   .reflive{margin:-4px 2px 11px;font-size:12px;color:var(--muted)}
   .reflive.bad{color:var(--bad);font-weight:650}
+  .refpaths{margin-top:10px}
+  .refpaths .scroll{border:1px solid var(--line2);border-radius:10px}
+  .refpaths table{font-size:12.5px}
+  .refpaths th,.refpaths td{padding:8px 10px;white-space:nowrap}
+  .refpaths tbody tr:last-child td{border-bottom:none}
+  .refpnote{margin:6px 2px 0;font-size:12px;color:var(--muted)}
   .footnote{font-size:12px;color:var(--muted);line-height:1.7;padding:2px 4px}
   .footnote b{color:var(--ink2)}
   #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
@@ -167,12 +173,14 @@
         <div class="sec-h"><h2>추천 링크 퍼널 (카페24 통계)</h2><div class="refctl"><span class="note" id="refNote"></span><button class="btn hidden" id="refLive" type="button">지금 조회</button></div></div>
         <div class="reflive hidden" id="refLiveMsg"></div>
         <div class="tiles" id="refTiles"></div>
+        <div class="refpaths hidden" id="refPaths"></div>
         <div class="reftest hidden" id="refTest"></div>
         <div class="reftest hidden" id="refPre"></div>
         <div class="card refcard">
           <div class="chart-title">추천 적립금 기록 (카페24 공식)</div>
           <div class="chart-sub" id="refOfficialSub"></div>
           <div class="tiles" id="refOfficial"></div>
+          <div class="refpaths hidden" id="refOfficialPaths"></div>
           <div class="reftest hidden" id="refOfficialPre"></div>
         </div>
         <div class="sec-h" style="margin-top:22px"><h2>날짜별</h2></div>
@@ -508,18 +516,29 @@ function renderReferral(){
   const tile=(k,v,d,c)=>'<div class="tile"><div class="k">'+esc(k)+(c?' <span class="chip warn">'+esc(c)+'</span>':'')+'</div><div class="v">'+esc(v)+'</div><div class="d">'+esc(d)+'</div></div>';
   const P=R.pre, PF=P&&P.funnel, early=R.to<R.from, span=P?(P.from===P.to?P.from:P.from+' ~ '+P.to):'';
   const preView=!!(early&&PF), tag=preView?'발송 전 시험':'';
-  const F=preView?PF:(R.funnel||{visits:0,joins:0,orders:0,revenue:0});
+  const M4=['visits','joins','orders','revenue'], RO=R.orderSource?(R.order||{}):{};
+  const F=preView?PF:M4.reduce((s,m)=>(s[m]=((R.funnel||{})[m]||0)+(RO[m]||0),s),{});
   $('#refSec').classList.remove('hidden');
   $('#refSub').textContent=[R.from+(R.sentCount?' 발송':'부터'),R.link?'추천 링크 '+String(R.link).replace(/^https?:\/\//,''):''].filter(Boolean).join(' · ');
   $('#refNote').textContent=(early?(preView?'지금은 발송 전 시험 숫자 · '+R.from+'부터 캠페인 숫자로 바뀜':R.from+'부터 셉니다 · 아직 시작 전'):R.from+' ~ '+R.to)+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
   $('#refLive').classList.toggle('hidden',!R.liveUrl);
   $('#refLive').onclick=()=>liveLookup(false);
   $('#refTiles').innerHTML=[
-    tile('링크 유입',fmt(F.visits)+'회',preView?'일반·시험 링크 합계':R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문',tag),
+    tile('링크 유입',fmt(F.visits)+'회',preView?'일반·시험 링크 합계':R.orderSource?'문자·주문 완료 화면 합계':R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문',tag),
     tile('가입',fmt(F.joins)+'명',(R.joinSource==='direct'?'가입 완료 화면 기준 · ':'')+'유입 대비 '+pct(F.joins,F.visits),tag),
     tile('구매',fmt(F.orders)+'건','결제·입금 완료 기준 · 유입 대비 '+pct(F.orders,F.visits),tag),
     tile('매출',fmt(F.revenue)+'원',F.orders?'취소·환불돼도 바로 안 빠짐 · 1건당 '+fmt(F.revenue/F.orders)+'원':'아직 구매 없음',tag)
   ].join('');
+  const showPaths=!!(R.orderSource&&!preView), FN=R.funnel||{}, cnt=v=>fmt(v||0);
+  $('#refPaths').classList.toggle('hidden',!showPaths);
+  if(showPaths){
+    const prow=(name,reach,sent,x)=>'<tr><td>'+esc(name)+'</td><td>'+reach+'</td><td>'+sent+'</td><td>'+cnt(x.visits)+'회</td><td>'+cnt(x.joins)+'명</td><td>'+cnt(x.orders)+'건</td><td>'+cnt(x.revenue)+'</td></tr>';
+    $('#refPaths').innerHTML='<div class="scroll"><table><thead><tr><th>경로</th><th>받은·본 회원</th><th>보내기 누른 회원</th><th>링크 유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead><tbody>'
+      +prow('문자',R.sentCount?cnt(R.sentCount)+'명':'—','—',FN)
+      +prow('주문 완료 화면',cnt(RO.views)+'명',cnt(RO.shares)+'명',RO)
+      +'</tbody></table></div><div class="refpnote">위 네 칸은 두 경로 합계입니다. 받은·본 회원은 문자 줄이면 문자를 받은 회원, 주문 완료 화면 줄이면 추천 창을 본 회원입니다.'
+      +(R.orderFrom?' 주문 완료 화면은 '+esc(R.orderFrom)+'부터 셉니다.':' 주문 완료 화면 추천 창은 아직 올리지 않았습니다(승인 대기). 올리면 이 줄이 셉니다.')+'</div>';
+  }
   const T=R.test, hasTest=!!(R.testSource&&T&&(T.visits||T.joins||T.orders||T.revenue));
   $('#refTest').classList.toggle('hidden',!hasTest);
   if(hasTest) $('#refTest').textContent='시험 링크('+R.testSource+') 결과 — 유입 '+fmt(T.visits)+'회 · 가입 '+fmt(T.joins)+'명 · 구매 '+fmt(T.orders)+'건 · 매출 '+fmt(T.revenue)+'원 · 위 숫자에는 안 섞임';
@@ -539,15 +558,24 @@ function renderReferral(){
       tile('그 주문 매출',fmt(OV.revenue)+'원','적립금 사용분 포함 결제액',otag),
       tile('추천인 적립금',fmt(OV.granted)+'원','지급 대기 '+fmt(OV.pending)+'원',otag)
     ].join('');
+    const PT=!preO&&R.orderSource&&O.paths, PL=O.paths&&O.paths.test;
+    const lanes=[['문자','real'],['주문 완료 화면','order'],['경로 모름','unknown']].concat(PL&&(PL.rewards||PL.revoked)?[['시험 링크','test']]:[]);
+    const orow=(name,x)=>'<tr><td>'+esc(name)+'</td><td>'+fmt(x.orders||0)+'건</td><td>'+fmt(x.referees||0)+'명</td><td>'+fmt(x.revenue||0)+'</td><td>'+fmt(x.granted||0)+(x.pending?' <span class="situcell">대기 '+fmt(x.pending)+'</span>':'')+'</td></tr>';
+    $('#refOfficialPaths').classList.toggle('hidden',!(R.orderSource&&!preO));
+    $('#refOfficialPaths').innerHTML=PT
+      ?'<div class="scroll"><table><thead><tr><th>경로</th><th>추천 구매</th><th>구매한 친구</th><th>그 주문 매출(원)</th><th>추천인 적립금(원)</th></tr></thead><tbody>'+lanes.map(l=>orow(l[0],O.paths[l[1]]||{})).join('')+'</tbody></table></div><div class="refpnote">위 네 칸은 경로 합계입니다. 경로는 친구가 추천 링크를 누른 브라우저에서 회원으로 로그인했을 때(가입 직후 포함) 남긴 기록으로 나눕니다. 링크 없이 추천인 아이디를 직접 넣었거나, 링크를 누른 기기와 다른 기기에서만 로그인한 친구는 경로 모름으로 갑니다.</div>'
+      :'<div class="refpnote">'+(O.pathsError?'경로별 숫자를 못 받았습니다 — '+esc(O.pathsError):'경로별 숫자(문자 / 주문 완료 화면 / 경로 모름)는 이 화면이 카페24에서 자동 조회를 받으면 나옵니다.')+'</div>';
   } else {
+    $('#refOfficialPaths').classList.add('hidden');
     $('#refOfficial').innerHTML='';
     $('#refOfficialSub').textContent=O.status==='needs_scope'
       ?'취소를 뺀 추천 구매·매출은 이 칸에 나옵니다. 지금은 카페24 연결에 적립금 읽기 권한이 없어 아직 못 가져옵니다. 권한을 추가하면 다음 갱신부터 이 칸이 자동으로 채워집니다.'
       :'이번 갱신에서 적립금 기록을 못 읽었습니다 — '+(O.message||'');
   }
-  const d=preView&&P.daily?P.daily:(R.daily||{dates:[]});
-  $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(d.visits[i])+'</td><td>'+fmt(d.joins[i])+'</td><td>'+fmt(d.orders[i])+'</td><td>'+fmt(d.revenue[i])+'</td></tr>').reverse().join('');
-  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.liveUrl?' 이 화면을 열면 유입·가입·구매 숫자와 추천 적립금 기록을 카페24에서 그 자리에서 받아 옵니다. 열어 둔 동안에는 10분마다, 다른 탭에 갔다 돌아오면 바로 다시 받고, 제목 옆 <b>지금 조회</b>로 언제든 다시 받을 수 있습니다.':'')+(R.joinSource==='direct'?' 가입은 추천 링크로 들어온 브라우저가 가입 완료 화면에 도착한 수를 우리가 직접 셉니다(11/3 저녁부터, 카페24 통계는 가입을 늦고 일부만 세서 쓰지 않음).':' 가입·구매·매출은 카페24 통계가 정리한 뒤에 올라 유입보다 늦고, 가입은 실제보다 적게 나오기도 합니다(11/2 실측: 실제 가입 11명 중 통계 8명).')+' 구매·매출은 카페24 통계 기준이라 결제가 끝난 때(무통장은 입금 확인 때) 잡히고, 주문이 취소·환불돼도 바로 빠지지 않습니다. 취소를 뺀 숫자는 위 적립금 기록 칸에서 봅니다.'+' 추천으로 가입했는지는 카페24 관리자 &gt; 프로모션 &gt; 리워드 프로그램 관리 &gt; 추천인 관리에서 바로 확인됩니다.'+(P?(preView?' 발송 전인 지금은 칸과 날짜별 표에 <b>발송 전 시험</b>('+esc(span)+') 숫자를 보여 줍니다. 시작일('+esc(R.from)+')부터는 칸이 캠페인 숫자만 세고, 시험 숫자는 칸 아래 점선 줄로 내려갑니다.':' 시작일 전('+esc(P.from)+'부터)에 생긴 유입·가입·구매와 그 주문의 적립금 기록은 <b>발송 전 시험</b> 줄에만 따로 보여 주고 위 숫자에는 넣지 않습니다.'):'')+(R.error?'<br><b>알림</b> — '+esc(R.error):'')+(R.directError?'<br><b>알림</b> — 가입 직접 집계를 못 받아 카페24 통계 가입을 보여 줍니다: '+esc(R.directError):'');
+  const d=preView&&P.daily?P.daily:(R.daily||{dates:[]}), od=!preView&&R.orderSource&&R.orderDaily||null;
+  const dv=(m,i)=>(+d[m][i]||0)+(od&&Array.isArray(od[m])?+od[m][i]||0:0);
+  $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(dv('visits',i))+'</td><td>'+fmt(dv('joins',i))+'</td><td>'+fmt(dv('orders',i))+'</td><td>'+fmt(dv('revenue',i))+'</td></tr>').reverse().join('');
+  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+(R.orderSource?', '+esc(R.orderSource):'')+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.orderSource?' 경로는 링크 끝 꼬리표로 나눕니다(문자 '+esc(String(R.link||'').replace(/^https?:\/\//,''))+', 주문 완료 화면 '+esc(String(R.orderLink||'').replace(/^https?:\/\//,''))+'). 위 네 칸과 날짜별 표는 두 경로 합계입니다.':'')+(R.liveUrl?' 이 화면을 열면 유입·가입·구매 숫자와 추천 적립금 기록을 카페24에서 그 자리에서 받아 옵니다. 열어 둔 동안에는 10분마다, 다른 탭에 갔다 돌아오면 바로 다시 받고, 제목 옆 <b>지금 조회</b>로 언제든 다시 받을 수 있습니다.':'')+(R.joinSource==='direct'?' 가입은 추천 링크로 들어온 브라우저가 가입 완료 화면에 도착한 수를 우리가 직접 셉니다(11/3 저녁부터, 카페24 통계는 가입을 늦고 일부만 세서 쓰지 않음).':' 가입·구매·매출은 카페24 통계가 정리한 뒤에 올라 유입보다 늦고, 가입은 실제보다 적게 나오기도 합니다(11/2 실측: 실제 가입 11명 중 통계 8명).')+' 구매·매출은 카페24 통계 기준이라 결제가 끝난 때(무통장은 입금 확인 때) 잡히고, 주문이 취소·환불돼도 바로 빠지지 않습니다. 취소를 뺀 숫자는 위 적립금 기록 칸에서 봅니다.'+' 추천으로 가입했는지는 카페24 관리자 &gt; 프로모션 &gt; 리워드 프로그램 관리 &gt; 추천인 관리에서 바로 확인됩니다.'+(P?(preView?' 발송 전인 지금은 칸과 날짜별 표에 <b>발송 전 시험</b>('+esc(span)+') 숫자를 보여 줍니다. 시작일('+esc(R.from)+')부터는 칸이 캠페인 숫자만 세고, 시험 숫자는 칸 아래 점선 줄로 내려갑니다.':' 시작일 전('+esc(P.from)+'부터)에 생긴 유입·가입·구매와 그 주문의 적립금 기록은 <b>발송 전 시험</b> 줄에만 따로 보여 주고 위 숫자에는 넣지 않습니다.'):'')+(R.error?'<br><b>알림</b> — '+esc(R.error):'')+(R.directError?'<br><b>알림</b> — 가입 직접 집계를 못 받아 카페24 통계 가입을 보여 줍니다: '+esc(R.directError):'');
 }
 
 function liveToken(){
@@ -572,22 +600,22 @@ function applyLive(L,auto){
   const sum=a=>a.reduce((s,x)=>s+(+x||0),0);
   const d=R.daily=R.daily||{dates:[],visits:[],joins:[],orders:[],revenue:[]};
   const t=R.testDaily=R.testDaily||{visits:d.dates.map(()=>0),joins:d.dates.map(()=>0),orders:d.dates.map(()=>0),revenue:d.dates.map(()=>0)};
+  const OM=M.concat(['views','shares']), o=R.orderDaily=R.orderDaily||{};
+  OM.forEach(m=>{if(!Array.isArray(o[m])||o[m].length!==d.dates.length)o[m]=d.dates.map(()=>0);});
   const main=x=>!R.from||x>=R.from, pre=x=>!!(R.from&&x<R.from&&P&&P.daily&&x>=P.from);
-  const row=(g,x,h)=>{let i=g.dates.indexOf(x);if(i<0){i=g.dates.findIndex(y=>y>x);if(i<0)i=g.dates.length;g.dates.splice(i,0,x);M.forEach(m=>{g[m].splice(i,0,0);if(h)h[m].splice(i,0,0);});}return i;};
-  const put=(x,a,b)=>{a=a||{};b=b||{};
-    if(main(x)){const i=row(d,x,t);M.forEach(m=>{d[m][i]=a[m]||0;t[m][i]=b[m]||0;});if(!R.to||x>R.to)R.to=x;return true;}
+  const row=(g,x,h,k)=>{let i=g.dates.indexOf(x);if(i<0){i=g.dates.findIndex(y=>y>x);if(i<0)i=g.dates.length;g.dates.splice(i,0,x);M.forEach(m=>{g[m].splice(i,0,0);if(h)h[m].splice(i,0,0);});if(k)OM.forEach(m=>k[m].splice(i,0,0));}return i;};
+  const put=(x,a,b,c)=>{a=a||{};b=b||{};c=c||{};
+    if(main(x)){const i=row(d,x,t,o);M.forEach(m=>{d[m][i]=a[m]||0;t[m][i]=b[m]||0;o[m][i]=c[m]||0;});if(!R.to||x>R.to)R.to=x;return true;}
     if(!pre(x))return false;
-    const i=row(P.daily,x);M.forEach(m=>{P.daily[m][i]=(a[m]||0)+(b[m]||0);});if(!P.to||x>P.to)P.to=x;return true;};
-  (L.days||[]).forEach(x=>put(x.date,x.real,x.test));
-  const placed=put(L.date,L.real,L.test);
-  if(R.joinSource==='direct'){
-    const joins=(L.directDaily||[]).filter(x=>x.date!==L.date);
-    if(L.direct)joins.push({date:L.date,joins:(L.direct.real||{}).joins||0,testJoins:(L.direct.test||{}).joins||0});
-    joins.forEach(x=>{
-      if(main(x.date)){const i=d.dates.indexOf(x.date);if(i>=0){d.joins[i]=x.joins||0;t.joins[i]=x.testJoins||0;}}
-      else if(pre(x.date)){const i=P.daily.dates.indexOf(x.date);if(i>=0)P.daily.joins[i]=(x.joins||0)+(x.testJoins||0);}});
-  }
-  R.funnel={};R.test={};M.forEach(m=>{R.funnel[m]=sum(d[m]);R.test[m]=sum(t[m]);});
+    const i=row(P.daily,x);M.forEach(m=>{P.daily[m][i]=(a[m]||0)+(b[m]||0)+(c[m]||0);});if(!P.to||x>P.to)P.to=x;return true;};
+  (L.days||[]).forEach(x=>put(x.date,x.real,x.test,x.order));
+  const placed=put(L.date,L.real,L.test,L.order);
+  const joins=(L.directDaily||[]).filter(x=>x.date!==L.date), direct=R.joinSource==='direct';
+  if(L.direct){const q=L.direct.order||{};joins.push({date:L.date,joins:(L.direct.real||{}).joins||0,testJoins:(L.direct.test||{}).joins||0,orderJoins:q.joins||0,orderViews:q.views||0,orderShares:q.shares||0});}
+  joins.forEach(x=>{
+    if(main(x.date)){const i=d.dates.indexOf(x.date);if(i>=0){if(direct){d.joins[i]=x.joins||0;t.joins[i]=x.testJoins||0;o.joins[i]=x.orderJoins||0;}o.views[i]=x.orderViews||0;o.shares[i]=x.orderShares||0;}}
+    else if(direct&&pre(x.date)){const i=P.daily.dates.indexOf(x.date);if(i>=0)P.daily.joins[i]=(x.joins||0)+(x.testJoins||0)+(x.orderJoins||0);}});
+  R.funnel={};R.test={};R.order={};M.forEach(m=>{R.funnel[m]=sum(d[m]);R.test[m]=sum(t[m]);});OM.forEach(m=>{R.order[m]=sum(o[m]);});
   if(P&&P.daily){P.funnel={};M.forEach(m=>{P.funnel[m]=sum(P.daily[m]);});}
   if(placed)R.updatedAt=L.checkedAt+(auto?' 자동 조회':' 바로 조회');
   return placed;
