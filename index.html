@@ -49,6 +49,12 @@
   .sec-h h2{font-size:16.5px;font-weight:750;letter-spacing:-.3px;margin:0}
   .sec-h .note{font-size:12px;color:var(--muted)}
 
+  .tabs{position:sticky;top:0;z-index:30;display:flex;gap:4px;margin-top:18px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .tab{appearance:none;border:0;border-bottom:2.5px solid transparent;margin-bottom:-1px;background:none;color:var(--muted);
+    font:inherit;font-size:15px;font-weight:750;letter-spacing:-.2px;padding:12px 14px 10px;cursor:pointer;transition:.12s}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+
   .verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:14px;
     background:linear-gradient(180deg,var(--accent-soft),transparent);border:1px solid var(--line)}
   .verdict .mark{flex:0 0 auto;width:34px;height:34px;border-radius:9px;background:var(--good);
@@ -142,103 +148,114 @@
       <div class="eyebrow" id="eyebrow"></div>
       <h1 id="title">매출 대시보드</h1>
       <div class="sub" id="subtitle"></div>
+      <div class="sub hidden" id="refSub"></div>
     </div>
     <button class="themebtn" id="themeToggle" type="button">◑ 테마</button>
   </header>
+
+  <nav class="tabs hidden" id="tabs" role="tablist" aria-label="화면 선택">
+    <button class="tab" id="tabSales" type="button" role="tab" data-tab="sales" aria-controls="paneSales" aria-selected="true">매출</button>
+    <button class="tab" id="tabRef" type="button" role="tab" data-tab="referral" aria-controls="paneRef" aria-selected="false">추천 캠페인</button>
+  </nav>
 
   <div id="loading" class="state">데이터 불러오는 중…</div>
   <div id="error" class="state hidden"></div>
 
   <main id="app" class="hidden">
-    <section id="refSec" class="hidden">
-      <div class="sec-h"><h2 id="refTitle">추천 캠페인 퍼널</h2><div class="refctl"><span class="note" id="refNote"></span><button class="btn hidden" id="refLive" type="button">지금 조회</button></div></div>
-      <div class="reflive hidden" id="refLiveMsg"></div>
-      <div class="tiles" id="refTiles"></div>
-      <div class="reftest hidden" id="refTest"></div>
-      <div class="reftest hidden" id="refPre"></div>
-      <div class="card refcard">
-        <div class="chart-title">추천 적립금 기록 (카페24 공식)</div>
-        <div class="chart-sub" id="refOfficialSub"></div>
-        <div class="tiles" id="refOfficial"></div>
-        <div class="reftest hidden" id="refOfficialPre"></div>
-      </div>
-      <div class="card scroll" style="margin-top:12px">
-        <table>
-          <thead><tr><th>날짜</th><th>유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead>
-          <tbody id="refBody"></tbody>
-        </table>
-      </div>
-      <div class="footnote" id="refFoot" style="margin-top:8px"></div>
-    </section>
-
-    <section id="rangeSec" class="hidden">
-      <div class="card">
-        <div class="filters">
-          <div class="fgroup"><div class="lab">기간</div><div class="btns"><input class="btn" type="date" id="fromDate" aria-label="시작일"><span class="tilde">~</span><input class="btn" type="date" id="toDate" aria-label="종료일"></div></div>
-          <div class="fgroup"><div class="lab">빠른 선택</div><div class="btns" id="presetBtns"></div></div>
-          <div class="fgroup"><div class="lab">단위</div><div class="btns" id="unitBtns"></div></div>
+    <div id="paneRef" class="hidden" role="tabpanel" aria-labelledby="tabRef">
+      <section id="refSec" class="hidden">
+        <div class="sec-h"><h2>추천 링크 퍼널 (카페24 통계)</h2><div class="refctl"><span class="note" id="refNote"></span><button class="btn hidden" id="refLive" type="button">지금 조회</button></div></div>
+        <div class="reflive hidden" id="refLiveMsg"></div>
+        <div class="tiles" id="refTiles"></div>
+        <div class="reftest hidden" id="refTest"></div>
+        <div class="reftest hidden" id="refPre"></div>
+        <div class="card refcard">
+          <div class="chart-title">추천 적립금 기록 (카페24 공식)</div>
+          <div class="chart-sub" id="refOfficialSub"></div>
+          <div class="tiles" id="refOfficial"></div>
+          <div class="reftest hidden" id="refOfficialPre"></div>
         </div>
-        <div class="rangenote" id="rangeNote"></div>
-      </div>
-    </section>
-
-    <section id="verdictSec" class="hidden">
-      <div class="verdict">
-        <div class="mark" id="verdictMark">✓</div>
-        <div><b id="verdictTitle"></b><p id="verdictBody"></p></div>
-      </div>
-    </section>
-
-    <section id="tilesSec" class="hidden"><div class="tiles" id="tiles"></div></section>
-
-    <section>
-      <div class="sec-h"><h2>채널별 · 주말/평일 추이</h2><div class="note">버튼으로 채널·구분을 바꿔보세요</div></div>
-      <div class="card">
-        <div class="filters">
-          <div class="fgroup"><div class="lab">채널</div><div class="btns" id="chBtns"></div></div>
-          <div class="fgroup"><div class="lab">구분</div><div class="btns" id="segBtns"></div></div>
-          <div class="fgroup"><div class="lab">지표</div><div class="btns" id="metBtns"></div></div>
+        <div class="sec-h" style="margin-top:22px"><h2>날짜별</h2></div>
+        <div class="card scroll">
+          <table>
+            <thead><tr><th>날짜</th><th>유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead>
+            <tbody id="refBody"></tbody>
+          </table>
         </div>
-        <div class="chartcard">
-          <div class="chart-title" id="mainTitle"></div>
-          <div class="chart-sub" id="mainSub"></div>
-          <div class="scroll"><svg id="mainChart" viewBox="0 0 680 300" role="img" aria-label="주간 매출 차트"></svg></div>
-        </div>
-      </div>
-    </section>
+        <div class="footnote" id="refFoot" style="margin-top:8px"></div>
+      </section>
+    </div>
 
-    <section>
-      <div class="mini">
-        <div>
-          <div class="sec-h"><h2>채널별 비중</h2></div>
-          <div class="card chartcard">
-            <div class="chart-sub" style="margin-top:2px" id="stackSub"></div>
-            <div class="legend" id="stackLegend"></div>
-            <div class="scroll"><svg id="stackChart" viewBox="0 0 440 280" role="img" aria-label="채널별 비중 누적 막대"></svg></div>
+    <div id="paneSales" role="tabpanel" aria-labelledby="tabSales">
+      <section id="rangeSec" class="hidden">
+        <div class="card">
+          <div class="filters">
+            <div class="fgroup"><div class="lab">기간</div><div class="btns"><input class="btn" type="date" id="fromDate" aria-label="시작일"><span class="tilde">~</span><input class="btn" type="date" id="toDate" aria-label="종료일"></div></div>
+            <div class="fgroup"><div class="lab">빠른 선택</div><div class="btns" id="presetBtns"></div></div>
+            <div class="fgroup"><div class="lab">단위</div><div class="btns" id="unitBtns"></div></div>
+          </div>
+          <div class="rangenote" id="rangeNote"></div>
+        </div>
+      </section>
+
+      <section id="verdictSec" class="hidden">
+        <div class="verdict">
+          <div class="mark" id="verdictMark">✓</div>
+          <div><b id="verdictTitle"></b><p id="verdictBody"></p></div>
+        </div>
+      </section>
+
+      <section id="tilesSec" class="hidden"><div class="tiles" id="tiles"></div></section>
+
+      <section>
+        <div class="sec-h"><h2>채널별 · 주말/평일 추이</h2><div class="note">버튼으로 채널·구분을 바꿔보세요</div></div>
+        <div class="card">
+          <div class="filters">
+            <div class="fgroup"><div class="lab">채널</div><div class="btns" id="chBtns"></div></div>
+            <div class="fgroup"><div class="lab">구분</div><div class="btns" id="segBtns"></div></div>
+            <div class="fgroup"><div class="lab">지표</div><div class="btns" id="metBtns"></div></div>
+          </div>
+          <div class="chartcard">
+            <div class="chart-title" id="mainTitle"></div>
+            <div class="chart-sub" id="mainSub"></div>
+            <div class="scroll"><svg id="mainChart" viewBox="0 0 680 300" role="img" aria-label="주간 매출 차트"></svg></div>
           </div>
         </div>
-        <div id="holiWrap">
-          <div class="sec-h"><h2 id="holiTitle">연휴 뒤 패턴</h2></div>
-          <div class="card chartcard">
-            <div class="chart-sub" style="margin-top:2px" id="holiSub"></div>
-            <div class="legend" id="lineLegend"></div>
-            <div class="scroll"><svg id="lineChart" viewBox="0 0 440 280" role="img" aria-label="연휴 뒤 패턴 선 그래프"></svg></div>
+      </section>
+
+      <section>
+        <div class="mini">
+          <div>
+            <div class="sec-h"><h2>채널별 비중</h2></div>
+            <div class="card chartcard">
+              <div class="chart-sub" style="margin-top:2px" id="stackSub"></div>
+              <div class="legend" id="stackLegend"></div>
+              <div class="scroll"><svg id="stackChart" viewBox="0 0 440 280" role="img" aria-label="채널별 비중 누적 막대"></svg></div>
+            </div>
+          </div>
+          <div id="holiWrap">
+            <div class="sec-h"><h2 id="holiTitle">연휴 뒤 패턴</h2></div>
+            <div class="card chartcard">
+              <div class="chart-sub" style="margin-top:2px" id="holiSub"></div>
+              <div class="legend" id="lineLegend"></div>
+              <div class="scroll"><svg id="lineChart" viewBox="0 0 440 280" role="img" aria-label="연휴 뒤 패턴 선 그래프"></svg></div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section>
-      <div class="sec-h"><h2 id="tableTitle">주간 상세</h2></div>
-      <div class="card scroll">
-        <table>
-          <thead><tr><th id="thPeriod">주</th><th id="thRev">매출</th><th>건수</th><th id="thDelta">전주 대비</th><th>상황</th></tr></thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
+      <section>
+        <div class="sec-h"><h2 id="tableTitle">주간 상세</h2></div>
+        <div class="card scroll">
+          <table>
+            <thead><tr><th id="thPeriod">주</th><th id="thRev">매출</th><th>건수</th><th id="thDelta">전주 대비</th><th>상황</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
 
-    <section id="footSec" class="hidden"><div class="footnote" id="footnote"></div></section>
+      <section id="footSec" class="hidden"><div class="footnote" id="footnote"></div></section>
+    </div>
   </main>
 </div>
 
@@ -409,9 +426,6 @@ function boot(){
 
 function setup(){
   UNIT=D.revenueUnitLabel||'만';
-  document.title=(D.clientName?D.clientName+' ':'')+'매출 대시보드';
-  $('#eyebrow').textContent=D.eyebrow||((D.clientName||'')+' · 판매 채널 매출 점검');
-  $('#title').textContent=D.title||'매출 대시보드';
   const r=D.range||{};
   $('#subtitle').textContent=[r.from&&r.to?(r.from+' ~ '+r.to):'',D.granularityLabel||'주간 기준',
     D.weekdayRule||'주말=금~일, 평일=월~목',D.source||''].filter(Boolean).join(' · ');
@@ -436,10 +450,46 @@ function setup(){
   if(D.daily) initRange();
 
   buildBtns();
+  initTabs();
   $('#loading').classList.add('hidden');
   $('#app').classList.remove('hidden');
   renderAll();
   startLive();
+}
+
+let TAB='sales';
+const tabKey=()=>'dashboard-tab:'+location.pathname+':'+(new URLSearchParams(location.search).get('c')||'sample');
+function tabName(){ return D.referral.tab||'추천 캠페인'; }
+
+function showTab(t){
+  const R=D.referral, ref=!!R&&t==='referral';
+  const title=ref?(R.title||'추천 캠페인 퍼널'):(D.title||'매출 대시보드');
+  TAB=ref?'referral':'sales';
+  $('#paneSales').classList.toggle('hidden',ref);
+  $('#paneRef').classList.toggle('hidden',!ref);
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===TAB)));
+  $('#eyebrow').textContent=ref?(D.clientName?D.clientName+' · ':'')+tabName():(D.eyebrow||((D.clientName||'')+' · 판매 채널 매출 점검'));
+  $('#title').textContent=title;
+  $('#subtitle').classList.toggle('hidden',ref);
+  $('#refSub').classList.toggle('hidden',!ref);
+  document.title=(D.clientName?D.clientName+' ':'')+(ref?title:'매출 대시보드');
+  hideTip();
+}
+
+function initTabs(){
+  if(!D.referral){showTab('sales');return;}
+  $('#tabs').classList.remove('hidden');
+  $('#tabRef').textContent=tabName();
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>{
+    if(b.dataset.tab===TAB) return;
+    showTab(b.dataset.tab);
+    const u=new URL(location.href);u.searchParams.set('tab',TAB);history.replaceState(null,'',u);
+    try{localStorage.setItem(tabKey(),TAB);}catch(e){}
+    if(scrollY>0) scrollTo(0,0);
+  });
+  let t=new URLSearchParams(location.search).get('tab');
+  if(!t){try{t=localStorage.getItem(tabKey());}catch(e){}}
+  showTab(t);
 }
 
 function renderTiles(){
@@ -460,7 +510,7 @@ function renderReferral(){
   const preView=!!(early&&PF), tag=preView?'발송 전 시험':'';
   const F=preView?PF:(R.funnel||{visits:0,joins:0,orders:0,revenue:0});
   $('#refSec').classList.remove('hidden');
-  $('#refTitle').textContent=R.title||'추천 캠페인 퍼널';
+  $('#refSub').textContent=[R.from+(R.sentCount?' 발송':'부터'),R.link?'추천 링크 '+String(R.link).replace(/^https?:\/\//,''):''].filter(Boolean).join(' · ');
   $('#refNote').textContent=(early?(preView?'지금은 발송 전 시험 숫자 · '+R.from+'부터 캠페인 숫자로 바뀜':R.from+'부터 셉니다 · 아직 시작 전'):R.from+' ~ '+R.to)+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
   $('#refLive').classList.toggle('hidden',!R.liveUrl);
   $('#refLive').onclick=()=>liveLookup(false);
