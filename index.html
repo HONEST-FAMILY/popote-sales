@@ -579,7 +579,7 @@ function renderReferral(){
     const heldAP=Object.entries(AP.holds||{}).map(h=>h[0]+' '+fmt(h[1])+'건').join(', ');
     $('#refAuto').textContent='3천원 자동 지급 — '+(AP.mode==='on'&&AP.writable?'켜짐':AP.mode==='on'?'켜졌지만 카페24 적립금 쓰기 권한이 없어 지급 안 함':'아직 꺼짐(계산만 하고 지급 안 함)')
       +' · 추천한 분이 기록된 가입 친구 '+fmt((RFR.real||0)+(RFR.order||0)+(RFR.form||0))+'명'+(RFR.form?'(가입 화면 추천인 칸에 직접 적은 '+fmt(RFR.form)+'명 포함)':'')+' · 지급 '+fmt(AP.paid||0)+'건('+fmt(AP.granted||0)+'원) · 지급할 차례 '+fmt(AP.due||0)+'건'
-      +' · 배송완료 3일 기다림 '+fmt((AP.waiting||0)+(AP.shipping||0)+(AP.unpaid||0))+'건 · 보류 '+fmt(AP.held||0)+'건'+(heldAP?'('+heldAP+')':'')
+      +' · 배송완료 '+(AP.waitDays?AP.waitDays+'일 ':'')+'기다림 '+fmt((AP.waiting||0)+(AP.shipping||0)+(AP.unpaid||0))+'건 · 보류 '+fmt(AP.held||0)+'건'+(heldAP?'('+heldAP+')':'')
       +(AP.cafe24?' · 지급관리에서 준 것 '+fmt(AP.cafe24)+'건':'')+(AP.recall?' · 회수 확인 '+fmt(AP.recall)+'건':'')+(AP.error?' · 지급 실패 '+fmt(AP.error)+'건':'')
       +(AP.status==='error'?' · 마지막 계산 실패: '+(AP.message||''):'')+' · 마지막 계산 '+String(AP.at||'').slice(5);
   }
