@@ -182,6 +182,7 @@
           <div class="tiles" id="refOfficial"></div>
           <div class="refpaths hidden" id="refOfficialPaths"></div>
           <div class="reftest hidden" id="refOfficialPre"></div>
+          <div class="reftest hidden" id="refAuto"></div>
         </div>
         <div class="sec-h" style="margin-top:22px"><h2>날짜별</h2></div>
         <div class="card scroll">
@@ -572,6 +573,16 @@ function renderReferral(){
       ?'취소를 뺀 추천 구매·매출은 이 칸에 나옵니다. 지금은 카페24 연결에 적립금 읽기 권한이 없어 아직 못 가져옵니다. 권한을 추가하면 다음 갱신부터 이 칸이 자동으로 채워집니다.'
       :'이번 갱신에서 적립금 기록을 못 읽었습니다 — '+(O.message||'');
   }
+  const AP=R.autopay, RFR=R.referrers||{}, showAP=!!(AP&&AP.status&&AP.status!=='not_run');
+  $('#refAuto').classList.toggle('hidden',!showAP);
+  if(showAP){
+    const heldAP=Object.entries(AP.holds||{}).map(h=>h[0]+' '+fmt(h[1])+'건').join(', ');
+    $('#refAuto').textContent='3천원 자동 지급 — '+(AP.mode==='on'&&AP.writable?'켜짐':AP.mode==='on'?'켜졌지만 카페24 적립금 쓰기 권한이 없어 지급 안 함':'아직 꺼짐(계산만 하고 지급 안 함)')
+      +' · 추천한 분이 기록된 가입 친구 '+fmt((RFR.real||0)+(RFR.order||0))+'명 · 지급 '+fmt(AP.paid||0)+'건('+fmt(AP.granted||0)+'원) · 지급할 차례 '+fmt(AP.due||0)+'건'
+      +' · 배송완료 3일 기다림 '+fmt((AP.waiting||0)+(AP.shipping||0)+(AP.unpaid||0))+'건 · 보류 '+fmt(AP.held||0)+'건'+(heldAP?'('+heldAP+')':'')
+      +(AP.cafe24?' · 지급관리에서 준 것 '+fmt(AP.cafe24)+'건':'')+(AP.recall?' · 회수 확인 '+fmt(AP.recall)+'건':'')+(AP.error?' · 지급 실패 '+fmt(AP.error)+'건':'')
+      +(AP.status==='error'?' · 마지막 계산 실패: '+(AP.message||''):'')+' · 마지막 계산 '+String(AP.at||'').slice(5);
+  }
   const d=preView&&P.daily?P.daily:(R.daily||{dates:[]}), od=!preView&&R.orderSource&&R.orderDaily||null;
   const dv=(m,i)=>(+d[m][i]||0)+(od&&Array.isArray(od[m])?+od[m][i]||0:0);
   $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(dv('visits',i))+'</td><td>'+fmt(dv('joins',i))+'</td><td>'+fmt(dv('orders',i))+'</td><td>'+fmt(dv('revenue',i))+'</td></tr>').reverse().join('');
@@ -617,6 +628,8 @@ function applyLive(L,auto){
     else if(direct&&pre(x.date)){const i=P.daily.dates.indexOf(x.date);if(i>=0)P.daily.joins[i]=(x.joins||0)+(x.testJoins||0)+(x.orderJoins||0);}});
   R.funnel={};R.test={};R.order={};M.forEach(m=>{R.funnel[m]=sum(d[m]);R.test[m]=sum(t[m]);});OM.forEach(m=>{R.order[m]=sum(o[m]);});
   if(P&&P.daily){P.funnel={};M.forEach(m=>{P.funnel[m]=sum(P.daily[m]);});}
+  if(L.autopay)R.autopay=L.autopay;
+  if(L.referrers)R.referrers=L.referrers;
   if(placed)R.updatedAt=L.checkedAt+(auto?' 자동 조회':' 바로 조회');
   return placed;
 }
