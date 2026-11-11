@@ -604,11 +604,12 @@ function renderReferral(){
   const showPaths=!!(R.orderSource&&!preView), FN=R.funnel||{}, cnt=v=>fmt(v||0);
   $('#refPaths').classList.toggle('hidden',!showPaths);
   if(showPaths){
+    const unsorted=(RO.shares||0)-(RO.kakao||0)-(RO.sms||0)-(RO.copy||0);
     const prow=(name,reach,sent,x)=>'<tr><td>'+esc(name)+'</td><td>'+reach+'</td><td>'+sent+'</td><td>'+cnt(x.visits)+'회</td><td>'+cnt(x.joins)+'명</td><td>'+cnt(x.orders)+'건</td><td>'+cnt(x.revenue)+'</td></tr>';
     $('#refPaths').innerHTML='<div class="scroll"><table><thead><tr><th>경로</th><th>받은·본 회원</th><th>보내기 누른 회원</th><th>링크 유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead><tbody>'
       +prow('문자',R.sentCount?cnt(R.sentCount)+'명':'—','—',FN)
-      +prow('주문 완료 화면',cnt(RO.views)+'명',cnt(RO.shares)+'명',RO)
-      +'</tbody></table></div><div class="refpnote">위 네 칸은 두 경로 합계입니다. 받은·본 회원은 문자 줄이면 문자를 받은 회원, 주문 완료 화면 줄이면 추천 창을 본 회원입니다.'
+      +prow('주문 완료 화면',cnt(RO.views)+'명',cnt(RO.shares)+'명 <span class="situcell">카카오톡 '+cnt(RO.kakao)+' · 문자 '+cnt(RO.sms)+' · 링크 복사 '+cnt(RO.copy)+(unsorted>0?' · 구분 전 '+cnt(unsorted):'')+'</span>',RO)
+      +'</tbody></table></div><div class="refpnote">위 네 칸은 두 경로 합계입니다. 받은·본 회원은 문자 줄이면 문자를 받은 회원, 주문 완료 화면 줄이면 추천 창을 본 회원입니다. 보내기 누른 회원 옆 작은 글씨는 누른 단추별 수이고, 구분 전은 단추별로 세기 전(2026-11-11 낮)에 누른 수입니다.'
       +(R.orderFrom?' 주문 완료 화면은 '+esc(R.orderFrom)+'부터 셉니다.':' 주문 완료 화면 추천 창은 아직 올리지 않았습니다(승인 대기). 올리면 이 줄이 셉니다.')+'</div>';
   }
   const T=R.test, hasTest=!!(R.testSource&&T&&(T.visits||T.joins||T.orders||T.revenue));
@@ -686,7 +687,7 @@ function applyLive(L,auto){
   const sum=a=>a.reduce((s,x)=>s+(+x||0),0);
   const d=R.daily=R.daily||{dates:[],visits:[],joins:[],orders:[],revenue:[]};
   const t=R.testDaily=R.testDaily||{visits:d.dates.map(()=>0),joins:d.dates.map(()=>0),orders:d.dates.map(()=>0),revenue:d.dates.map(()=>0)};
-  const OM=M.concat(['views','shares']), o=R.orderDaily=R.orderDaily||{};
+  const OM=M.concat(['views','shares','kakao','sms','copy']), o=R.orderDaily=R.orderDaily||{};
   OM.forEach(m=>{if(!Array.isArray(o[m])||o[m].length!==d.dates.length)o[m]=d.dates.map(()=>0);});
   const main=x=>!R.from||x>=R.from, pre=x=>!!(R.from&&x<R.from&&P&&P.daily&&x>=P.from);
   const row=(g,x,h,k)=>{let i=g.dates.indexOf(x);if(i<0){i=g.dates.findIndex(y=>y>x);if(i<0)i=g.dates.length;g.dates.splice(i,0,x);M.forEach(m=>{g[m].splice(i,0,0);if(h)h[m].splice(i,0,0);});if(k)OM.forEach(m=>k[m].splice(i,0,0));}return i;};
@@ -697,9 +698,9 @@ function applyLive(L,auto){
   (L.days||[]).forEach(x=>put(x.date,x.real,x.test,x.order));
   const placed=put(L.date,L.real,L.test,L.order);
   const joins=(L.directDaily||[]).filter(x=>x.date!==L.date), direct=R.joinSource==='direct';
-  if(L.direct){const q=L.direct.order||{};joins.push({date:L.date,joins:(L.direct.real||{}).joins||0,testJoins:(L.direct.test||{}).joins||0,orderJoins:q.joins||0,orderViews:q.views||0,orderShares:q.shares||0});}
+  if(L.direct){const q=L.direct.order||{};joins.push({date:L.date,joins:(L.direct.real||{}).joins||0,testJoins:(L.direct.test||{}).joins||0,orderJoins:q.joins||0,orderViews:q.views||0,orderShares:q.shares||0,orderShareKakao:q.kakao||0,orderShareSms:q.sms||0,orderShareCopy:q.copy||0});}
   joins.forEach(x=>{
-    if(main(x.date)){const i=d.dates.indexOf(x.date);if(i>=0){if(direct){d.joins[i]=x.joins||0;t.joins[i]=x.testJoins||0;o.joins[i]=x.orderJoins||0;}o.views[i]=x.orderViews||0;o.shares[i]=x.orderShares||0;}}
+    if(main(x.date)){const i=d.dates.indexOf(x.date);if(i>=0){if(direct){d.joins[i]=x.joins||0;t.joins[i]=x.testJoins||0;o.joins[i]=x.orderJoins||0;}o.views[i]=x.orderViews||0;o.shares[i]=x.orderShares||0;o.kakao[i]=x.orderShareKakao||0;o.sms[i]=x.orderShareSms||0;o.copy[i]=x.orderShareCopy||0;}}
     else if(direct&&pre(x.date)){const i=P.daily.dates.indexOf(x.date);if(i>=0)P.daily.joins[i]=(x.joins||0)+(x.testJoins||0)+(x.orderJoins||0);}});
   R.funnel={};R.test={};R.order={};M.forEach(m=>{R.funnel[m]=sum(d[m]);R.test[m]=sum(t[m]);});OM.forEach(m=>{R.order[m]=sum(o[m]);});
   if(P&&P.daily){P.funnel={};M.forEach(m=>{P.funnel[m]=sum(P.daily[m]);});}
