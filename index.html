@@ -120,6 +120,7 @@
   .mini{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .refcard{padding:14px 16px;margin-top:12px}
   .refcard .tile{box-shadow:none;background:var(--card2)}
+  .refcard .tiles{grid-template-columns:repeat(3,1fr)}
   .refcard .chart-sub{margin-bottom:10px}
   .reftest{margin-top:10px;padding:9px 13px;border:1px dashed var(--line);border-radius:10px;font-size:12.5px;color:var(--ink2)}
   .refctl{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
@@ -143,7 +144,7 @@
     font:inherit;font-size:12px;font-weight:650;padding:6px 11px;border-radius:9px;cursor:pointer}
   .state{padding:48px 20px;text-align:center;color:var(--muted);font-size:14px}
   .hidden{display:none!important}
-  @media (max-width:720px){ .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px} }
+  @media (max-width:720px){ .tiles,.refcard .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px} }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -553,18 +554,22 @@ function renderReferral(){
   if(hasOT) $('#refOfficialPre').textContent=preO?'위 네 칸은 발송 전 시험 주문(친구 주문일이 '+R.from+' 전) 기록입니다. '+R.from+' 발송부터는 그날 이후 주문만 세고, 시험 주문은 이 줄로 내려옵니다.':'발송 전 시험 주문 — '+(OT.rewards?'추천 구매 '+fmt(OT.orders)+'건 · 그 주문 매출 '+fmt(OT.revenue)+'원 · 추천인 적립금 '+fmt(OT.granted)+'원'+(OT.pending?' (지급 대기 '+fmt(OT.pending)+'원)':''):'아직 지급 기록 없음 · 시험 주문에 추천인 적립금을 '+(R.liveUrl?'지급한 뒤 이 화면으로 돌아오면 바로 여기 오릅니다':'지급하면 다음 갱신부터 여기 오릅니다'))+' · 위 숫자에는 안 섞임';
   if(O.status==='ok'){
     $('#refOfficialSub').textContent='친구 주문이 배송완료된 뒤 관리자가 추천인에게 3천원을 지급하면 카페24가 남기는 감사 적립금 기록입니다. 그래서 위 구매보다 며칠 늦게 오르고, 지급하지 않으면 계속 0입니다. 링크를 거치지 않고 추천인 아이디를 직접 넣은 가입도 포함됩니다.'+(R.liveUrl?' 지급한 뒤 이 화면으로 돌아오면 바로 반영됩니다.':'')+(early&&!preO?' 아래 네 칸은 캠페인 시작일('+R.from+')부터 셉니다. 시작 전 시험 주문은 그 아래 점선 줄에 따로 나옵니다.':'');
+    const LV=OV.laterRevenue!=null&&!O.laterError;
     $('#refOfficial').innerHTML=[
       tile('추천 구매',fmt(OV.orders)+'건','취소된 주문 제외',otag),
       tile('구매한 친구',fmt(OV.referees)+'명','서로 다른 회원 수',otag),
       tile('그 주문 매출',fmt(OV.revenue)+'원','적립금 사용분 포함 결제액',otag),
+      tile('그 뒤 주문 매출',LV?fmt(OV.laterRevenue)+'원':'—',LV?'다시 산 친구 '+fmt(OV.laterReferees)+'명 · '+fmt(OV.laterOrders)+'건':O.laterError?'이번 조회에서 못 읽음':'화면을 열면 자동 조회로 받음',otag),
+      tile('친구 매출 합계',LV?fmt(OV.revenue+OV.laterRevenue)+'원':'—','그 주문 + 그 뒤 주문',otag),
       tile('추천인 적립금',fmt(OV.granted)+'원','지급 대기 '+fmt(OV.pending)+'원',otag)
     ].join('');
     const PT=!preO&&R.orderSource&&O.paths, PL=O.paths&&O.paths.test;
     const lanes=[['문자','real'],['주문 완료 화면','order'],['경로 모름','unknown']].concat(PL&&(PL.rewards||PL.revoked)?[['시험 링크','test']]:[]);
-    const orow=(name,x)=>'<tr><td>'+esc(name)+'</td><td>'+fmt(x.orders||0)+'건</td><td>'+fmt(x.referees||0)+'명</td><td>'+fmt(x.revenue||0)+'</td><td>'+fmt(x.granted||0)+(x.pending?' <span class="situcell">대기 '+fmt(x.pending)+'</span>':'')+'</td></tr>';
+    const lcell=x=>LV?fmt(x.laterRevenue||0)+(x.laterOrders?' <span class="situcell">'+fmt(x.laterReferees||0)+'명 · '+fmt(x.laterOrders)+'건</span>':''):'—';
+    const orow=(name,x)=>'<tr><td>'+esc(name)+'</td><td>'+fmt(x.orders||0)+'건</td><td>'+fmt(x.referees||0)+'명</td><td>'+fmt(x.revenue||0)+'</td><td>'+lcell(x)+'</td><td>'+fmt(x.granted||0)+(x.pending?' <span class="situcell">대기 '+fmt(x.pending)+'</span>':'')+'</td></tr>';
     $('#refOfficialPaths').classList.toggle('hidden',!(R.orderSource&&!preO));
     $('#refOfficialPaths').innerHTML=PT
-      ?'<div class="scroll"><table><thead><tr><th>경로</th><th>추천 구매</th><th>구매한 친구</th><th>그 주문 매출(원)</th><th>추천인 적립금(원)</th></tr></thead><tbody>'+lanes.map(l=>orow(l[0],O.paths[l[1]]||{})).join('')+'</tbody></table></div><div class="refpnote">위 네 칸은 경로 합계입니다. 경로는 친구가 추천 링크를 누른 브라우저에서 회원으로 로그인했을 때(가입 직후 포함) 남긴 기록으로 나눕니다. 링크 없이 추천인 아이디를 직접 넣었거나, 링크를 누른 기기와 다른 기기에서만 로그인한 친구는 경로 모름으로 갑니다.</div>'
+      ?'<div class="scroll"><table><thead><tr><th>경로</th><th>추천 구매</th><th>구매한 친구</th><th>그 주문 매출(원)</th><th>그 뒤 주문 매출(원)</th><th>추천인 적립금(원)</th></tr></thead><tbody>'+lanes.map(l=>orow(l[0],O.paths[l[1]]||{})).join('')+'</tbody></table></div><div class="refpnote">위 칸은 경로 합계입니다. 그 뒤 주문 매출은 3천원이 나간 친구가 그 주문 다음에 산 주문(결제 끝나고 취소 안 된 것)을 오늘까지 모두 더한 값이고, 30분마다 다시 셉니다.'+(O.laterError?' 이번에는 못 읽었습니다 — '+esc(O.laterError):'')+' 경로는 친구가 추천 링크를 누른 브라우저에서 회원으로 로그인했을 때(가입 직후 포함) 남긴 기록으로 나눕니다. 링크 없이 추천인 아이디를 직접 넣었거나, 링크를 누른 기기와 다른 기기에서만 로그인한 친구는 경로 모름으로 갑니다.</div>'
       :'<div class="refpnote">'+(O.pathsError?'경로별 숫자를 못 받았습니다 — '+esc(O.pathsError):'경로별 숫자(문자 / 주문 완료 화면 / 경로 모름)는 이 화면이 카페24에서 자동 조회를 받으면 나옵니다.')+'</div>';
   } else {
     $('#refOfficialPaths').classList.add('hidden');
