@@ -163,6 +163,7 @@
       <div class="sub" id="subtitle"></div>
       <div class="sub hidden" id="refSub"></div>
       <div class="sub hidden" id="expSub"></div>
+      <div class="sub hidden" id="intSub"></div>
     </div>
     <button class="themebtn" id="themeToggle" type="button">◑ 테마</button>
   </header>
@@ -171,6 +172,7 @@
     <button class="tab" id="tabSales" type="button" role="tab" data-tab="sales" aria-controls="paneSales" aria-selected="true">매출</button>
     <button class="tab" id="tabRef" type="button" role="tab" data-tab="referral" aria-controls="paneRef" aria-selected="false">추천 캠페인</button>
     <button class="tab hidden" id="tabExp" type="button" role="tab" data-tab="experiment" aria-controls="paneExp" aria-selected="false">시험 결과</button>
+    <button class="tab hidden" id="tabInt" type="button" role="tab" data-tab="interest" aria-controls="paneInt" aria-selected="false">관심 버튼</button>
   </nav>
 
   <div id="loading" class="state">데이터 불러오는 중…</div>
@@ -218,7 +220,7 @@
         <div class="exprog hidden" id="expProg"></div>
       </section>
       <section>
-        <div class="sec-h"><h2>두 반 비교</h2><div class="note" id="expCmpNote"></div></div>
+        <div class="sec-h"><h2 id="expCmpTitle">두 반 비교</h2><div class="note" id="expCmpNote"></div></div>
         <div class="card scroll"><table><thead id="expCmpHead"></thead><tbody id="expCmpBody"></tbody></table></div>
       </section>
       <section><div class="reftest expstory" id="expStory"></div></section>
@@ -227,6 +229,26 @@
         <div class="card scroll"><table><thead id="expDayHead"></thead><tbody id="expDayBody"></tbody></table></div>
       </section>
       <div class="footnote" id="expFoot" style="margin-top:8px"></div>
+    </div>
+
+    <div id="paneInt" class="hidden" role="tabpanel" aria-labelledby="tabInt">
+      <section>
+        <div class="verdict" id="intVerdict">
+          <div class="mark" id="intMark">…</div>
+          <div><b id="intVerdictTitle">숫자를 받는 중입니다</b><p id="intVerdictBody"></p></div>
+        </div>
+      </section>
+      <section>
+        <div class="sec-h"><h2>판정 기간 숫자</h2><div class="refctl"><span class="note" id="intNote"></span><button class="btn hidden" id="intLive" type="button">지금 조회</button></div></div>
+        <div class="reflive hidden" id="intLiveMsg"></div>
+        <div class="tiles" id="intTiles"></div>
+        <div class="exprog hidden" id="intProg"></div>
+      </section>
+      <section>
+        <div class="sec-h"><h2>날짜별</h2></div>
+        <div class="card scroll"><table><thead><tr><th>날짜</th><th>카드 본 사람</th><th>관심 있어요</th><th>6팩</th><th>10팩</th></tr></thead><tbody id="intDayBody"></tbody></table></div>
+      </section>
+      <div class="footnote" id="intFoot" style="margin-top:8px"></div>
     </div>
 
     <div id="paneSales" role="tabpanel" aria-labelledby="tabSales">
@@ -484,6 +506,7 @@ function setup(){
   renderTiles();
   renderReferral();
   renderExperiment();
+  renderInterest();
   // footnote
   if(D.footnote){$('#footSec').classList.remove('hidden');$('#footnote').innerHTML=D.footnote;}
   // holiday (optional)
@@ -500,37 +523,43 @@ function setup(){
   renderAll();
   startLive();
   startExpLive();
+  startIntLive();
 }
 
 let TAB='sales';
 const tabKey=()=>'dashboard-tab:'+location.pathname+':'+(new URLSearchParams(location.search).get('c')||'sample');
 function tabName(){ return D.referral.tab||'추천 캠페인'; }
 function expTabName(){ return D.experiment.tab||'시험 결과'; }
+function intTabName(){ return D.interest.tab||'관심 버튼'; }
 
 function showTab(t){
-  const R=D.referral, E=D.experiment, ref=!!R&&t==='referral', exp=!!E&&t==='experiment';
-  const title=ref?(R.title||'추천 캠페인 퍼널'):exp?(E.title||'시험 결과'):(D.title||'매출 대시보드');
-  TAB=ref?'referral':exp?'experiment':'sales';
-  $('#paneSales').classList.toggle('hidden',ref||exp);
+  const R=D.referral, E=D.experiment, I=D.interest, ref=!!R&&t==='referral', exp=!!E&&t==='experiment', itr=!!I&&t==='interest', side=ref||exp||itr;
+  const title=ref?(R.title||'추천 캠페인 퍼널'):exp?(E.title||'시험 결과'):itr?(I.title||'관심 버튼'):(D.title||'매출 대시보드');
+  TAB=ref?'referral':exp?'experiment':itr?'interest':'sales';
+  $('#paneSales').classList.toggle('hidden',side);
   $('#paneRef').classList.toggle('hidden',!ref);
   $('#paneExp').classList.toggle('hidden',!exp);
+  $('#paneInt').classList.toggle('hidden',!itr);
   document.querySelectorAll('#tabs .tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===TAB)));
-  $('#eyebrow').textContent=ref?(D.clientName?D.clientName+' · ':'')+tabName():exp?(D.clientName?D.clientName+' · ':'')+expTabName():(D.eyebrow||((D.clientName||'')+' · 판매 채널 매출 점검'));
+  $('#eyebrow').textContent=side?(D.clientName?D.clientName+' · ':'')+(ref?tabName():exp?expTabName():intTabName()):(D.eyebrow||((D.clientName||'')+' · 판매 채널 매출 점검'));
   $('#title').textContent=title;
-  $('#subtitle').classList.toggle('hidden',ref||exp);
+  $('#subtitle').classList.toggle('hidden',side);
   $('#refSub').classList.toggle('hidden',!ref);
   $('#expSub').classList.toggle('hidden',!exp);
-  document.title=(D.clientName?D.clientName+' ':'')+(ref||exp?title:'매출 대시보드');
+  $('#intSub').classList.toggle('hidden',!itr);
+  document.title=(D.clientName?D.clientName+' ':'')+(side?title:'매출 대시보드');
   hideTip();
 }
 
 function initTabs(){
-  if(!D.referral&&!D.experiment){showTab('sales');return;}
+  if(!D.referral&&!D.experiment&&!D.interest){showTab('sales');return;}
   $('#tabs').classList.remove('hidden');
   $('#tabRef').classList.toggle('hidden',!D.referral);
   if(D.referral) $('#tabRef').textContent=tabName();
   $('#tabExp').classList.toggle('hidden',!D.experiment);
   if(D.experiment) $('#tabExp').textContent=expTabName();
+  $('#tabInt').classList.toggle('hidden',!D.interest);
+  if(D.interest) $('#tabInt').textContent=intTabName();
   document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>{
     if(b.dataset.tab===TAB) return;
     showTab(b.dataset.tab);
@@ -737,6 +766,25 @@ function expNeedCart(s){
   const p0=s.carts/s.visitors;
   return {n:expNeedM(p0,p0,true),p0,p1:p0*(1+EXP_LIFT)};
 }
+function expNeedFixed(M,Q,n0,prop){
+  if(!(M>0)||!(Q>0)||!(n0>0)) return null;
+  const M1=M*(1+EXP_LIFT), Q1=Q*(1+EXP_LIFT);
+  if(prop&&M1>.95) return null;
+  const room=(M1-M)*(M1-M)/(EXP_Z*EXP_Z)-Math.max(0,Q-M*M)/n0;
+  return room>0?Math.ceil(Math.max(0,Q1-M1*M1)/room):null;
+}
+function expPrePost(N,perDay,start,spend){
+  if(!N||!N.visitors||!N.mature) return null;
+  const today=kstToday(), wait=start>today?Math.max(0,Math.round((pd(start)-pd(today))/DAY)):0;
+  const n0=Math.round(N.visitors+perDay*wait), c=N.carts/N.visitors, M=N.revenue/N.mature, Q=N.revenue_sq/N.mature;
+  const needC=expNeedFixed(c,c,n0,true), needR=expNeedFixed(M,Q,n0);
+  const floor=M>0?EXP_Z*Math.sqrt(Math.max(0,Q-M*M)/n0)/M:null;
+  return {n0,needC,needR,floor,cart:needC&&perDay>0?Math.ceil(needC/perDay):null,rev:needR&&perDay>0?Math.ceil(needR/perDay)+spend:null};
+}
+function expBaseDays(E){
+  if(E.mode!=='prepost'||!E.beforeFrom) return E.baseDays||28;
+  return Math.max(7,Math.min(90,Math.round((pd(kstToday())-pd(E.beforeFrom))/DAY)+1));
+}
 function expSum(...ss){const o={};['visitors','carts','mature','buyers','revenue','revenue_sq'].forEach(k=>{o[k]=ss.reduce((t,s)=>t+((s&&s[k])||0),0);});return o;}
 function expProject(N,perDay,ads,start,spend){
   if(!(perDay>0)||!N||!N.visitors||!N.mature) return null;
@@ -768,6 +816,7 @@ function renderExperiment(){
   const short=u=>String(u||'').replace(/^https?:\/\//,'');
   const span=d=>d==null?'':'약 '+Math.max(1,Math.round(d/7))+'주'+(d>=56?'(약 '+Math.round(d/30)+'달)':'');
   const today=kstToday(), started=!!(E.from&&E.from<=today), nA=E.armA||'지금 화면', nB=E.armB||'개월 고르기';
+  const pre=E.mode==='prepost'&&!!E.beforeFrom, bf=E.beforeFrom||'', mdn=s=>s?(+s.slice(5,7))+'/'+(+s.slice(8,10)):'', bfm=mdn(bf);
   const mark=(sym,tone,title,body)=>{const m=$('#expMark');m.textContent=sym;
     m.style.background=tone==='bad'?'var(--bad)':tone==='warn'?'var(--warn)':tone==='good'?'var(--good)':'var(--muted)';
     $('#expVerdictTitle').textContent=title;$('#expVerdictBody').textContent=body;};
@@ -799,7 +848,35 @@ function renderExperiment(){
   const month=d!=null?d*perDay*30:null, gain=d!=null?d*(B.mature||0):null;
   const md=s=>s?s.slice(5).replace('-','/'):'';
   let tone='warn', chip='판정 전', cTone='warn', cChip='';
-  if(!live){
+  $('#expCmpTitle').textContent=pre?'켜기 전과 켠 뒤':'두 반 비교';
+  if(pre&&live&&!L.arms.before){
+    mark('!','bad','켜기 전·켠 뒤 숫자가 아직 안 옵니다','시작일('+E.from+')이 들어갔는데 출고관리 서버 조회가 아직 켜기 전과 켠 뒤를 나눠 주지 않습니다. 서버 조회를 켜기 전과 비교로 바꿔야 판정이 나옵니다.');
+    ['#expTiles','#expCmpHead','#expCmpBody','#expDayHead','#expDayBody'].forEach(s=>{$(s).innerHTML='';});
+    $('#expProg').classList.add('hidden');$('#expStory').textContent='';$('#expFoot').textContent='';$('#expCmpNote').textContent='';
+    return;
+  }
+  if(!live&&pre){
+    const start=E.from&&E.from>today?E.from:today;
+    const q=expPrePost(N,perDay,start,spend), split=expProject(N,perDay,null,start,spend);
+    const at=n=>E.from&&n?'('+mdn(shift(start,n))+'쯤)':'';
+    const pb=N.mature?(N.buyers||0)/N.mature:0, pcart=N.visitors?(N.carts||0)/N.visitors:0;
+    mark('…','warn','아직 시작 전입니다'+(E.status?' — '+E.status:''),
+      '시작하면 이 화면에 오는 모든 손님에게 '+nB+' 버튼을 보여 주고, 켜기 전('+bfm+'부터) 이 화면에 처음 온 손님과 비교합니다. 켜기 전 손님 '+fmt(q?q.n0:(N.visitors||0))+'명이 '+(start>today?'켜는 날('+mdn(start)+')까지 모여':'이미 모여 있어')+' 켠 뒤 손님만 모으면 됩니다. '
+      +(q&&q.rev?'지금 이 화면 손님(하루 약 '+Math.round(perDay)+'명)이면 켜고 매출 판정 '+span(q.rev)+at(q.rev)+', 담기 판정 '+(q.cart?span(q.cart)+at(q.cart):'—')+' 걸립니다.':'아직 판정 손님 수를 잴 만큼 기록이 쌓이지 않았습니다.'));
+    $('#expTilesTitle').textContent='켜기 전 기준값 ('+bfm+'부터)';
+    $('#expTiles').innerHTML=[
+      tile('이 화면에 처음 온 손님',perDay?'하루 '+(perDay<10?perDay.toFixed(1):Math.round(perDay))+'명':'—','최근 2주 하루 평균 · '+bfm+'부터 합계 '+fmt(N.visitors||0)+'명 · 검수 방문 빼고','켜기 전'),
+      tile('담기 누른 손님',pc(N.carts||0,N.visitors||0),fmt(N.carts||0)+'명 / '+fmt(N.visitors||0)+'명 · 들어온 뒤 7일 안','켜기 전'),
+      tile('7일 안에 산 손님',pc(N.buyers||0,N.mature||0),'7일 지난 '+fmt(N.mature||0)+'명 중 '+fmt(N.buyers||0)+'명','켜기 전'),
+      tile('손님 100명당 매출',a?man(a.m*100):'—','7일 안 결제 합계 · 메뉴 상관없이','켜기 전')
+    ].join('');
+    $('#expProg').classList.remove('hidden');
+    $('#expProg').innerHTML='<b>판정에 필요한 손님</b> — 켜기 전 손님 '+fmt(q?q.n0:(N.visitors||0))+'명과 견주려면 켠 뒤 손님이 매출 판정 '+(q&&q.needR?fmt(q.needR)+'명(7일 지난 손님)':'아직 모름')+', 담기 판정 '+(q&&q.needC?fmt(q.needC)+'명':'아직 모름')+' 필요합니다. '
+      +'사는 손님('+(pb*100).toFixed(1)+'%)과 담기 누른 손님('+(pcart*100).toFixed(1)+'%)이 3분의 1 늘었을 때 운이 아니라고 가려낼 수 있는 수입니다.'
+      +(q&&q.floor?'<br>켜기 전 손님 수가 정해져 있어 100명당 매출이 약 '+Math.round(q.floor*100)+'% 넘게 늘어야 가려집니다. 그보다 작은 효과는 켠 뒤 손님을 오래 모아도 가려내기 어렵습니다.':'')
+      +(split&&split.rev?'<br>반으로 나눴다면 두 쪽을 처음부터 모아야 해 매출 판정 '+span(split.rev)+', 담기 판정 '+(split.cart?span(split.cart):'—')+' 걸립니다.':'')
+      +'<br>켜는 날부터는 켜기 전·켠 뒤 모두 메인 배너·팝업으로 들어온 손님만 셉니다. 문자·광고 링크로 온 손님은 켜기 전 몫이 없어 뺍니다.';
+  } else if(!live){
     const start=E.from&&E.from>today?E.from:today;
     const base=expProject(N,perDay,null,start,spend), fast=E.ads?expProject(N,perDay,E.ads,start,spend):null;
     const two=p=>'담기 판정 '+(p&&p.cart?span(p.cart):'—')+' · 매출 판정 '+(p&&p.rev?span(p.rev):'—');
@@ -849,8 +926,10 @@ function renderExperiment(){
       +'<div style="margin-top:12px"><b>매출 판정</b> — 7일 지난 손님 '+fmt(collected)+'명 / 필요한 '+fmt(needN)+'명'+(ready?' · 판정 끝':when?' · 예상 판정일 '+when:'')+'</div>'+bar(collected,needN)
       +'<div style="margin-top:8px"><span class="situcell">필요한 손님 수는 두 반을 합친 숫자로 매일 다시 셉니다. 광고 손님처럼 덜 사는 손님이 섞이면 그만큼 늘어납니다.</span></div>';
   }
-  $('#expCmpNote').textContent=live?'같은 기간에 들어온 손님을 동전으로 나눠 차이는 화면 때문입니다':'시작 전이라 지금 화면만 있습니다';
-  $('#expCmpHead').innerHTML='<tr><th>항목</th><th>'+esc(nA)+(live?' (A)':' · 최근 '+(L.baseDays||28)+'일')+'</th><th>'+esc(nB)+(live?' (B)':'')+'</th><th>차이 (운으로 생길 범위)</th></tr>';
+  $('#expCmpNote').textContent=live?'같은 기간에 들어온 손님을 동전으로 나눠 차이는 화면 때문입니다':pre?'켜기 전 숫자만 있습니다. 켜면 오른쪽 칸이 채워집니다':'시작 전이라 지금 화면만 있습니다';
+  $('#expCmpHead').innerHTML=pre&&!live
+    ?'<tr><th>항목</th><th>켜기 전 · '+esc(bfm)+'부터</th><th>켠 뒤</th><th>차이 (운으로 생길 범위)</th></tr>'
+    :'<tr><th>항목</th><th>'+esc(nA)+(live?' (A)':' · 최근 '+(L.baseDays||28)+'일')+'</th><th>'+esc(nB)+(live?' (B)':'')+'</th><th>차이 (운으로 생길 범위)</th></tr>';
   const X=live?[A,B]:[N,null], wait='<span class="situcell">시작 전</span>';
   const range=(x,f)=>x?f(x.d)+' <span class="situcell">'+f(x.lo)+' ~ '+f(x.hi)+'</span>':'—';
   const lines=[
@@ -869,6 +948,8 @@ function renderExperiment(){
     ?'<b>성공 사례로 남길 문장</b><br>'+esc(lead)+', 같은 기간 바뀐 화면을 본 손님 100명당 매출이 '+man(a.m*100)+'에서 '+man(b.m*100)+'으로 '+Math.round(d/a.m*100)+'% 늘었습니다('+esc(L.from)+' ~ '+esc(L.window&&L.window.to||today)+', 손님 '+fmt(collected)+'명). 시험 동안 늘어난 매출은 '+man(gain)+', 모든 손님에게 켜면 한 달 약 '+man(month)+'입니다.'
     :cartReady&&cart.lo>0&&A.carts
     ?'<b>성공 사례로 남길 문장 (담기 판정)</b><br>'+esc(lead)+', 같은 기간 바뀐 화면을 본 손님 중 담기를 누른 손님이 '+pc(A.carts,A.visitors)+'에서 '+pc(B.carts||0,B.visitors)+'로 '+Math.round(cart.d/(A.carts/A.visitors)*100)+'% 늘었습니다('+esc(L.from)+' ~ '+esc(L.window&&L.window.to||today)+', 손님 '+fmt(arrived)+'명). 매출 판정이 나면 100명당 매출로 다시 씁니다.'
+    :pre
+    ?'<b>성공 사례로 남길 문장</b> — 판정이 나면 여기에 숫자를 채워 만들어집니다.<br>'+esc(lead)+', 이 화면 손님 100명당 매출이 켜기 전 □에서 켠 뒤 □으로 □% 늘었습니다(켜기 전 '+esc(bfm)+'~□, 켠 뒤 □~□, 손님 □명). 켠 뒤 늘어난 매출은 □, 한 달 약 □입니다.'
     :'<b>성공 사례로 남길 문장</b> — 판정이 나면 여기에 숫자를 채워 만들어집니다.<br>'+esc(lead)+', 같은 기간 바뀐 화면을 본 손님 100명당 매출이 □에서 □으로 □% 늘었습니다(기간, 손님 □명). 시험 동안 늘어난 매출은 □, 모든 손님에게 켜면 한 달 약 □입니다.';
   const rows=(L.daily||[]).slice().reverse(), young=s=>(s.mature||0)<(s.visitors||0);
   if(live){
@@ -879,9 +960,13 @@ function renderExperiment(){
     $('#expDayBody').innerHTML=rows.map(r=>'<tr><td>'+esc(r.date)+(young(r.none)?' <span class="situcell">7일 안 됨</span>':'')+'</td><td>'+fmt(r.none.visitors)+'</td><td>'+fmt(r.none.carts)+'</td><td>'+fmt(r.none.buyers)+'</td><td>'+fmt(r.none.revenue)+'</td></tr>').join('');
   }
   $('#expFoot').innerHTML='<b>세는 법</b> — 손님은 이 화면('+esc(short(E.page))+')에 처음 들어온 브라우저(휴대폰·컴퓨터) 하나를 한 명으로 셉니다. 검수 방문은 빼고, 같은 회원이 두 기기로 들어오면 처음 기기 하나로만 셉니다. '
-    +(live?'시작일('+esc(L.from)+')부터':'시작하면')+' 처음 온 브라우저마다 동전을 던져 '+esc(nA)+'(A)과 '+esc(nB)+'(B) 중 하나를 보여 주고, 다시 와도 같은 반입니다. '
-    +'매출은 들어온 뒤 7일 안에 그 회원이 결제한 돈 전부(메뉴 상관없이, 결제가 끝나고 취소 안 된 것)이고, 로그인한 회원 결제만 손님에게 이어집니다(비회원 결제는 두 반 모두 똑같이 빠짐). 7일이 안 지난 손님은 산 손님·매출 칸에서 아직 세지 않습니다. '
-    +'판정은 두 번 합니다. 담기를 누른 비율은 필요한 손님이 모이면 바로, 매출은 7일이 지난 손님이 필요한 만큼 모이면 합니다. 필요한 손님 수는 두 반을 합친 숫자로 매일 다시 세어(어느 반이 앞서는지는 보지 않음) 광고 손님처럼 덜 사는 손님이 섞이면 늘어나고, 운으로 생길 범위는 같은 손님 수로 동전을 다시 던졌을 때 100번 중 95번 들어오는 폭입니다. '
+    +(pre
+      ?'켜기 전은 '+esc(bf)+'부터 켜기 전날까지, 켠 뒤는 켠 날부터 이 화면에 처음 온 손님입니다. 켜는 날부터는 두 기간 모두 메인 배너·팝업으로 들어온 손님만 세고, 문자·광고 링크로 온 손님은 켜기 전 몫이 없어 뺍니다. '
+        +'매출은 들어온 뒤 7일 안에 그 회원이 결제한 돈 전부(메뉴 상관없이, 결제가 끝나고 취소 안 된 것)이고, 로그인한 회원 결제만 손님에게 이어집니다. 7일이 안 지난 손님은 산 손님·매출 칸에서 아직 세지 않습니다. '
+        +'판정은 켠 뒤 손님이 필요한 만큼 모이면 켜기 전과의 차이가 운으로 생길 범위(같은 손님 수로 다시 뽑았을 때 100번 중 95번 들어오는 폭)를 넘는지로 합니다. 연말처럼 쇼핑몰 전체 주문이 늘어나는 때는 판정 때 같은 기간 쇼핑몰 전체 주문 증가율을 함께 봅니다. '
+      :(live?'시작일('+esc(L.from)+')부터':'시작하면')+' 처음 온 브라우저마다 동전을 던져 '+esc(nA)+'(A)과 '+esc(nB)+'(B) 중 하나를 보여 주고, 다시 와도 같은 반입니다. '
+        +'매출은 들어온 뒤 7일 안에 그 회원이 결제한 돈 전부(메뉴 상관없이, 결제가 끝나고 취소 안 된 것)이고, 로그인한 회원 결제만 손님에게 이어집니다(비회원 결제는 두 반 모두 똑같이 빠짐). 7일이 안 지난 손님은 산 손님·매출 칸에서 아직 세지 않습니다. '
+        +'판정은 두 번 합니다. 담기를 누른 비율은 필요한 손님이 모이면 바로, 매출은 7일이 지난 손님이 필요한 만큼 모이면 합니다. 필요한 손님 수는 두 반을 합친 숫자로 매일 다시 세어(어느 반이 앞서는지는 보지 않음) 광고 손님처럼 덜 사는 손님이 섞이면 늘어나고, 운으로 생길 범위는 같은 손님 수로 동전을 다시 던졌을 때 100번 중 95번 들어오는 폭입니다. ')
     +'주문 자료는 사무실 PC가 20분마다 보내는 카페24 주문 가명 통계로 '+esc(L.through||'—')+'까지 반영됐습니다'+(L.stale?' — 1시간 넘게 새 자료가 안 와 그 뒤 결제는 아직 안 셌습니다(사무실 PC가 꺼지면 멈춤)':'')+'. '
     +(L.duplicates||L.conflicts?'같은 회원의 다른 기기 '+fmt(L.duplicates||0)+'개는 빼고, 한 기기에 회원이 둘 이상 붙은 '+fmt(L.conflicts||0)+'개는 결제를 잇지 않았습니다. ':'')
     +(E.liveUrl?'이 화면을 열면 숫자를 그 자리에서 받고, 열어 둔 동안 10분마다 다시 받습니다.':'')
@@ -893,7 +978,7 @@ function expLookup(auto){
   const E=D&&D.experiment, b=$('#expLive'), msg=$('#expLiveMsg');
   if(expBusy||!E||!E.liveUrl) return;
   expBusy=true;b.disabled=true;b.textContent='조회 중…';
-  const ask={key:E.key||'month',base_days:E.baseDays||28};
+  const ask={key:E.key||'month',base_days:expBaseDays(E)};
   if(E.from&&E.from<=kstToday()) ask.from=E.from;
   liveToken()
     .then(token=>fetch(E.liveUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({token},ask)),cache:'no-store'}))
@@ -915,6 +1000,77 @@ function startExpLive(){
   expLookup(true);
   setInterval(()=>{if(document.visibilityState==='visible')expLookup(true);},600000);
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-expAt>30000)expLookup(true);});
+}
+
+function renderInterest(){
+  const I=D.interest; if(!I) return;
+  const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+  const pc=(a,b)=>b?(a/b*100).toFixed(1)+'%':'—';
+  const tile=(k,v,d,c,tone)=>'<div class="tile"><div class="k">'+esc(k)+(c?' <span class="chip '+(tone||'flat')+'">'+esc(c)+'</span>':'')+'</div><div class="v">'+esc(v)+'</div><div class="d">'+esc(d)+'</div></div>';
+  const md=s=>s?s.slice(5).replace('-','/'):'';
+  const today=kstToday(), goal=I.goal||0.1, days=I.days||14, end=I.from?shift(I.from,days-1):'', want=Math.round(goal*100)+'%';
+  const started=!!(I.from&&I.from<=today), done=started&&today>end, dayN=started?Math.min(days,Math.round((pd(today)-pd(I.from))/DAY)+1):0;
+  const mark=(sym,tone,title,body)=>{const m=$('#intMark');m.textContent=sym;
+    m.style.background=tone==='bad'?'var(--bad)':tone==='warn'?'var(--warn)':tone==='good'?'var(--good)':'var(--muted)';
+    $('#intVerdictTitle').textContent=title;$('#intVerdictBody').textContent=body;};
+  $('#intSub').textContent=[started?md(I.from)+' 시작 · '+(done?'2주 끝남':dayN+'일째')+' · '+md(end)+'까지 세어 판정':(I.from?md(I.from)+' 시작 예정':'시작 전'),'추천 메뉴 화면 맨 아래 카드'].join(' · ');
+  $('#intLive').classList.toggle('hidden',!I.liveUrl);
+  $('#intLive').onclick=()=>intLookup(false);
+  const L=I.result;
+  $('#intNote').textContent=L&&L.checkedAt?L.checkedAt+' 기준':'';
+  if(!L||!L.totals){
+    mark('…','','숫자를 받는 중입니다',I.error?'최근 갱신을 못 했습니다 — '+I.error:'화면을 열면 출고관리 서버에서 바로 받아 옵니다.');
+    ['#intTiles','#intDayBody'].forEach(s=>{$(s).innerHTML='';});$('#intProg').classList.add('hidden');$('#intFoot').textContent='';
+    return;
+  }
+  const all=(L.daily||[]).filter(r=>!I.from||r.date>=I.from), rows=all.filter(r=>!end||r.date<=end);
+  const sum=k=>rows.reduce((s,r)=>s+(r[k]||0),0);
+  const seen=sum('viewers'), wanted=sum('clickers'), p6=sum('pack6'), p10=sum('pack10'), picked=p6+p10, passed=seen>0&&wanted/seen>=goal;
+  const later=all.filter(r=>end&&r.date>end).reduce((s,r)=>s+(r.clickers||0),0);
+  const line='카드를 본 '+fmt(seen)+'명 중 '+fmt(wanted)+'명('+pc(wanted,seen)+')이 \'관심 있어요\'를 눌렀습니다';
+  if(!started) mark('…','','시작 전입니다',(I.from?md(I.from)+'부터':'시작일을 넣으면')+' 카드를 본 사람과 누른 사람을 셉니다.');
+  else if(!done) mark('…','','판정 전 · '+dayN+'일째',line+'. '+md(end)+'까지 세어 본 사람의 '+want+' 이상이 누르면 위탁생산 견적을 받고, 못 넘으면 카드를 내립니다.');
+  else if(passed) mark('✓','good','기준을 넘었습니다',line+'. 기준 '+want+'를 넘어 위탁생산 견적을 받을 차례입니다.');
+  else mark('✕','bad','기준에 못 미쳤습니다',line+'. 기준 '+want+' 아래라 카드를 내립니다.');
+  $('#intTiles').innerHTML=
+    tile('카드 본 사람',fmt(seen)+'명',started?'하루 평균 '+(seen/Math.max(1,dayN)).toFixed(1)+'명':'')+
+    tile('관심 있어요',fmt(wanted)+'명','본 사람의 '+pc(wanted,seen),'기준 '+want,passed?'good':'flat')+
+    tile('6팩',fmt(p6)+'명','구성을 고른 사람의 '+pc(p6,picked))+
+    tile('10팩',fmt(p10)+'명','구성을 고른 사람의 '+pc(p10,picked));
+  const prog=$('#intProg');
+  prog.classList.toggle('hidden',!started);
+  prog.innerHTML=started?'2주 중 '+dayN+'일 지남 · '+md(end)+'까지 센 숫자로 판정합니다'+(later?' · '+md(end)+' 뒤에 누른 '+fmt(later)+'명은 판정에 넣지 않았습니다':'')+'<div class="bar"><i style="width:'+Math.round(dayN/days*100)+'%"></i></div>':'';
+  $('#intDayBody').innerHTML=all.slice().reverse().map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+fmt(r.viewers||0)+'</td><td>'+fmt(r.clickers||0)+'</td><td>'+fmt(r.pack6||0)+'</td><td>'+fmt(r.pack10||0)+'</td></tr>').join('');
+  $('#intFoot').innerHTML='<b>세는 법</b> — 추천 메뉴 화면 맨 아래 카드(\''+esc(I.card||'')+'\')가 화면 아래 담기 막대에 가리지 않고 반 이상 1초 보인 브라우저를 \'카드 본 사람\'으로, [관심 있어요]를 누른 브라우저를 \'관심 있어요\'로 셉니다. 같은 브라우저는 여러 번 와도 1명이고, 처음 본 날·처음 누른 날에 셉니다. 구성은 마지막에 고른 것 하나로 셉니다. 검수 방문은 빠지고, 이름·연락처는 받지 않습니다. '+(I.liveUrl?'이 화면을 열면 숫자를 그 자리에서 받고, 열어 둔 동안 10분마다 다시 받습니다.':'')+(I.error?'<br><b>알림</b> — '+esc(I.error):'');
+}
+
+let intBusy=false, intAt=0, intOn=false;
+function intLookup(auto){
+  const I=D&&D.interest, b=$('#intLive'), msg=$('#intLiveMsg');
+  if(intBusy||!I||!I.liveUrl) return;
+  intBusy=true;b.disabled=true;b.textContent='조회 중…';
+  const ask={key:I.key||'interest'};
+  if(I.from&&I.from<=kstToday()) ask.from=I.from;
+  liveToken()
+    .then(token=>fetch(I.liveUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({token},ask)),cache:'no-store'}))
+    .then(r=>r.json().catch(()=>({})).then(body=>{if(!r.ok)throw new Error(body.error||('숫자를 받지 못했습니다 ('+r.status+')'));return body;}))
+    .then(L=>{
+      I.result=L;I.resultAt=L.checkedAt;
+      renderInterest();
+      intAt=Date.now();
+      msg.className='reflive';
+      msg.textContent=String(L.checkedAt||'').slice(11)+'에 '+(auto?'이 화면을 열어 자동으로':'바로')+' 받은 숫자입니다. 열어 둔 동안 10분마다 다시 받습니다.';})
+    .catch(e=>{msg.className='reflive bad';
+      msg.textContent=(auto?'자동 조회를 못 했습니다 — ':'')+(e&&e.message&&!/fetch|network|load failed/i.test(e.message)?e.message:'숫자 서버에 연결하지 못했습니다. 잠시 뒤 다시 눌러 주세요.')+(I.result?' 아래는 '+(I.resultAt||'지난 갱신')+' 숫자입니다.':'');})
+    .finally(()=>{intBusy=false;b.disabled=false;b.textContent='지금 조회';});
+}
+
+function startIntLive(){
+  const I=D&&D.interest; if(!I||!I.liveUrl||intOn) return;
+  intOn=true;
+  intLookup(true);
+  setInterval(()=>{if(document.visibilityState==='visible')intLookup(true);},600000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Date.now()-intAt>30000)intLookup(true);});
 }
 
 function mkBtns(host,items,key,withDot,after){
