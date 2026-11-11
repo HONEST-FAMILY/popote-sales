@@ -1337,6 +1337,146 @@ function renderNext(){
   const rounds=(L.rounds||[]).filter(r=>!live||r.date>=L.from);
   const registered=(S.people||0)+(H.people||0), rcount=rounds.filter(r=>(r.send.people||0)+(r.hold.people||0)>0).length;
   const liveDays=live?Math.max(1,Math.round((pd(today)-pd(L.from))/DAY)+1):0;
+  if(E.mode==='prepost'){
+    const O=L.arms.other||{}, B=E.before||{}, allinNeed=E.allinNeed||80;
+    const bc=k=>(B.consent&&B.consent['d'+k])||{n:0,x:0}, bf=k=>(B.refuse&&B.refuse['d'+k])||{n:0,x:0};
+    const rate=o=>o&&o.n?o.x/o.n:null;
+    const p7=rate(bc(7))!=null?rate(bc(7)):LR?LR.d7:0.129, p30=rate(bc(30))!=null?rate(bc(30)):LR?LR.d30:0.246;
+    const sendWeek=live&&liveDays>=7&&(S.people||0)?(S.people||0)/(liveDays/7):perWeek*consent*(1-earlyShare);
+    const otherWeek=live&&liveDays>=7&&(O.people||0)?(O.people||0)/(liveDays/7):perWeek*(1-consent)*(1-earlyShare);
+    const otherAt=sendWeek>0?Math.round(allinNeed*otherWeek/sendWeek):allinNeed;
+    const mde=(p,a,b)=>a&&b?2.8*Math.sqrt(p*(1-p)*(1/a+1/b)):null;
+    const etaN=(n,days)=>{
+      if(live){let c=0;for(const r of rounds){c+=(r.send&&r.send.people)||0;if(c>=n){const a=shift(r.date,days+1);return a>today?a:null;}}}
+      const left=n-(live?(S.people||0):0), base=live||!E.from||E.from<today?today:E.from;
+      return sendWeek>0?shift(base,Math.ceil(left/sendWeek*7)+days+1):null;};
+    const a7=etaN(need,7), a30=etaN(need,30), weeksTo=x=>x?Math.max(1,Math.round((pd(x)-pd(E.from&&E.from>today?E.from:today))/DAY/7)):null;
+    const w7=weeksTo(a7), w30=weeksTo(a30), b7=weeksTo(etaN(allinNeed,7)), b30=weeksTo(etaN(allinNeed,30));
+    const r7=live?expProp(bc(7).x,bc(7).n,S.reordered7||0,S.mature7||0):null;
+    const r14=live?expProp(bc(14).x,bc(14).n,S.reordered14||0,S.mature14||0):null;
+    const r30=live?expProp(bc(30).x,bc(30).n,S.reordered30||0,S.mature30||0):null;
+    const o7=live?expProp(bf(7).x,bf(7).n,O.reordered7||0,O.mature7||0):null;
+    const o14=live?expProp(bf(14).x,bf(14).n,O.reordered14||0,O.mature14||0):null;
+    const o30=live?expProp(bf(30).x,bf(30).n,O.reordered30||0,O.mature30||0):null;
+    const net=(r,o)=>{if(!r)return null;if(!(o&&o.lo>0))return Object.assign({adj:false},r);const s1=(r.hi-r.lo)/3.92,s2=(o.hi-o.lo)/3.92,d=r.d-o.d,se=Math.sqrt(s1*s1+s2*s2);return {d,lo:d-1.96*se,hi:d+1.96*se,adj:true};};
+    const n7=net(r7,o7), n30=net(r30,o30);
+    const avg=(S.reordered30||0)?(S.revenue30||0)/S.reordered30:null;
+    const gain=n30&&avg!=null?n30.d*(S.mature30||0)*avg:null, gLo=n30&&avg!=null?n30.lo*(S.mature30||0)*avg:null, gHi=n30&&avg!=null?n30.hi*(S.mature30||0)*avg:null;
+    const ready7=live&&(S.mature7||0)>=need&&!!r7, ready30=live&&(S.mature30||0)>=need&&!!r30;
+    const tag=x=>x.lo>0?['성공','good','up']:x.hi<0?['줄었음','bad','down']:['차이 없음','warn','flat'];
+    const qs=(B.quarters||[]).filter(x=>x.c7&&x.c7.n);
+    const qText=qs.map(x=>(x.c7.x/x.c7.n*100).toFixed(1)).join(' · ')+(qs.length?'%':'');
+    const qMin=qs.length?Math.min(...qs.map(x=>x.c7.x/x.c7.n)):null, qMax=qs.length?Math.max(...qs.map(x=>x.c7.x/x.c7.n)):null;
+    const fq=qs.filter(x=>x.f7&&x.f7.n), fFirst=fq.length?fq[0].f7.x/fq[0].f7.n:null, fLast=fq.length?fq[fq.length-1].f7.x/fq[fq.length-1].f7.n:null;
+    const ym=s=>String(s||'').slice(0,7).replace('-','.'), period=ym(B.from)+'~'+ym(B.to);
+    const won=(x,r,o)=>x.adj?' 같은 기간 문자를 못 받은 손님도 '+pp(o.d)+' 올라 그만큼 뺀 문자 몫 '+pp(x.d)+'도 운으로 생길 범위('+pp(x.lo)+' ~ '+pp(x.hi)+')를 넘었습니다.':' 운으로 생길 범위('+pp(r.lo)+' ~ '+pp(r.hi)+')를 넘었습니다.'+(o?' 같은 기간 문자를 못 받은 손님은 전과 비슷해('+pp(o.d)+') 다른 이유로 다 같이 오른 것은 아닙니다.':'');
+    const mixed=(x,r,o,dd,sr)=>'받은 사람의 '+dd+'일 안 두 번째 주문은 문자 보내기 전 '+pc(dd===30?p30:p7)+' → '+pc(sr)+'('+pp(r.d)+')로 올랐지만, 같은 기간 문자를 못 받은 손님도 '+pp(o.d)+' 올라 그만큼 뺀 문자 몫 '+pp(x.d)+'는 운으로 생길 범위('+pp(x.lo)+' ~ '+pp(x.hi)+') 안입니다. 문자 말고 다른 이유(새 화면·광고 같은)로 다 같이 오른 몫이 커서, 더 모아야 가려집니다.';
+    $('#nextSub').textContent=(live
+      ?[md(L.from)+'('+wd(L.from)+') 첫 회차 · '+liveDays+'일째',rcount?'회차 '+rcount+'번':'','동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금) · 문자 보내기 전 1년과 견줌']
+      :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(E.status?' · '+E.status:''),'동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금) · 문자 보내기 전 1년과 견줌']).filter(Boolean).join(' · ');
+    if(!live){
+      mark('…','warn','아직 시작 전입니다'+(E.status?' — '+E.status:''),
+        '시작하면 화·금 오후 4시마다 그 회차에 처음 산 회원 중 광고 문자에 동의한 분 모두에게 보내고, 보낸 뒤 7일·30일 안에 두 번째로 산 비율을 문자를 보내기 전 1년('+period+') 같은 조건의 손님(광고 문자에 동의한 첫 구매 회원 '+fmt(bc(7).n)+'명)과 견줍니다. 반으로 나눠 일부러 안 보내는 사람은 없습니다. '
+        +'그 손님들은 문자 없이 100명 중 약 '+Math.round(p7*100)+'명이 7일 안에, 약 '+Math.round(p30*100)+'명이 30일 안에 다시 샀고'+(qs.length?', 7일 안 숫자가 분기마다 '+qText+'로 고르게 이어졌습니다. ':'. ')
+        +(sendWeek>0?'비교할 손님이 이미 모여 있어 받는 사람만 모이면 되고, 받는 사람이 한 주 약 '+Math.round(sendWeek)+'명이라 7일 판정은 시작하고 약 '+w7+'주, 30일 판정은 약 '+w30+'주 뒤입니다(같은 회차 거부 손님과 견줬다면 약 '+b7+'주 · '+b30+'주).':''));
+      $('#nextTilesTitle').textContent='비교할 \'전\' 숫자 (문자 보내기 전 1년, 광고 문자 동의 첫 구매 회원)';
+      $('#nextTiles').innerHTML=[
+        tile('처음 산 회원',perWeek?'한 주 '+Math.round(perWeek)+'명':'—',perWeek?'최근 '+weeks.length+'주 평균 · 광고 문자 동의는 약 '+Math.round(consent*100)+'%(받는 사람 한 주 약 '+Math.round(sendWeek)+'명)':'아직 한 주가 다 찬 자료가 없습니다'),
+        tile('7일 안 두 번째 주문',pc(p7),fmt(bc(7).n)+'명 중 '+fmt(bc(7).x)+'명 · '+period+' 화·금 회차마다 센 값','문자 없음'),
+        tile('1년 내내 같았나',qs.length?qText:'—',qs.length?'분기마다 7일 안 두 번째 주문(동의 손님) · '+pc(qMin)+' ~ '+pc(qMax)+(fq.length?' · 거부 손님은 '+pc(fFirst)+' → '+pc(fLast)+'로 올라와 비교 기준으로 안 씀':''):'아직 세지 않았습니다',qs.length?'고름':'',qs.length?'flat':''),
+        tile('30일 안 두 번째 주문',pc(p30),fmt(bc(30).n)+'명 중 '+fmt(bc(30).x)+'명'+(LR||N.mature30?' · 1인 매출(처음 산 회원 전체) '+man(N.mature30?(N.revenue30||0)/N.mature30:LR.rev30):''),'문자 없음')
+      ].join('');
+      $('#nextProg').classList.remove('hidden');
+      $('#nextProg').innerHTML='<b>판정에 필요한 사람</b> — 받은 사람 '+fmt(need)+'명(문자 보낸 날부터 7일·30일이 지난 사람). 비교할 \'전\' 손님은 이미 '+fmt(bc(7).n)+'명이라, 7일 안 두 번째 주문은 약 '+Math.round(mde(p7,need,bc(7).n)*100)+'%p(100명 중 '+Math.round(p7*100)+'명에서 '+Math.round((p7+mde(p7,need,bc(7).n))*100)+'명쯤), 30일 안은 약 '+Math.round(mde(p30,need,bc(30).n)*100)+'%p 넘게 차이 나야 운이 아니라고 가려집니다.'
+        +(sendWeek>0?'<br>지금 흐름(처음 산 회원 한 주 약 '+Math.round(perWeek)+'명 × 동의 약 '+Math.round(consent*100)+'%)이면 받는 사람이 한 주 약 '+Math.round(sendWeek)+'명이라 7일 판정 약 '+w7+'주'+(E.from&&a7?'('+md(a7)+'쯤)':'')+', 30일 판정 약 '+w30+'주'+(E.from&&a30?'('+md(a30)+'쯤)':'')+' 걸립니다. 같은 회차 거부 손님과 견줬다면(받은 사람 '+fmt(allinNeed)+'명 · 못 받은 사람 약 '+fmt(otherAt)+'명) 7일 약 '+b7+'주 · 30일 약 '+b30+'주였습니다.':'')
+        +'<br>더 당기려면 받는 사람이 늘어야 하는데, 광고 문자에 동의한 첫 구매 손님이 한 주 이만큼이 전부입니다. 효과가 이보다 작으면 판정 날 \'차이 없음\'이 나옵니다.';
+    } else if(!(S.people||0)){
+      mark('…','warn','첫 회차가 아직 등록되지 않았습니다',md(L.from)+'('+wd(L.from)+')부터 시작으로 넣었는데 등록된 회원이 없습니다. 회차 아침에 그 회차 대상(광고 문자 동의 첫 구매 회원)을 등록하면 받은 사람 숫자가 여기에 나오고, 문자 보내기 전 1년 같은 조건 손님과 견줍니다.');
+    } else if(ready30){
+      const [t]=tag(n30);
+      if(t==='성공') mark('✓','good','성공 — 문자를 받은 사람이 30일 안에 두 번째로 더 많이 샀습니다','받은 사람 '+fmt(S.mature30)+'명(30일 지남)의 30일 안 두 번째 주문은 '+pc(nextRate(S,30))+'로, 문자 보내기 전 1년 같은 조건 손님 '+pc(p30)+'보다 '+pp(r30.d)+' 높고'+won(n30,r30,o30)+(gain!=null?' 시험 동안 늘어난 매출은 약 '+man(gain)+'입니다.':''));
+      else if(t==='줄었음') mark('✕','bad','받은 사람이 오히려 덜 샀습니다','30일 안 두 번째 주문 문자 보내기 전 '+pc(p30)+' → 받은 사람 '+pc(nextRate(S,30))+'로 운으로 생길 범위('+pp(n30.lo)+' ~ '+pp(n30.hi)+')보다도 아래입니다. 문구나 시점을 바꿔야 합니다.');
+      else if(n30.adj&&r30.lo>0) mark('?','warn','아직 모름 — 받은 사람이 더 샀지만 못 받은 손님도 같이 올랐습니다',mixed(n30,r30,o30,30,nextRate(S,30)));
+      else mark('=','warn','차이 없음 — 늘었다고 볼 만큼 차이가 나지 않았습니다','30일 안 두 번째 주문 문자 보내기 전 '+pc(p30)+' → 받은 사람 '+pc(nextRate(S,30))+', 차이 '+pp(r30.d)+'는 운으로 생길 범위('+pp(r30.lo)+' ~ '+pp(r30.hi)+') 안입니다. 약 '+Math.round(mde(p30,S.mature30,bc(30).n)*100)+'%p 넘는 효과는 없었다고 볼 수 있고, 그보다 작은 효과는 더 모아야 보입니다.');
+    } else if(ready7){
+      const [t]=tag(n7);
+      if(t==='성공') mark('✓','good','7일 판정 성공 — 문자를 받은 사람이 7일 안에 두 번째로 더 많이 샀습니다','문자 보내기 전 1년 같은 조건 손님 '+pc(p7)+' → 받은 사람 '+pc(nextRate(S,7))+', 차이 '+pp(r7.d)+'.'+won(n7,r7,o7)+' 매출까지 보는 30일 판정은 '+(a30?md(a30)+'쯤':'더 모인 뒤')+'입니다.');
+      else if(n7.adj&&r7.lo>0) mark('?','warn','7일 판정 — 아직 모름, 못 받은 손님도 같이 올랐습니다',mixed(n7,r7,o7,7,nextRate(S,7))+' 30일 판정은 '+(a30?md(a30)+'쯤':'더 모인 뒤')+'입니다.');
+      else if(t==='줄었음') mark('!','bad','7일 판정 — 받은 사람이 덜 샀습니다','7일 안 두 번째 주문 문자 보내기 전 '+pc(p7)+' → 받은 사람 '+pc(nextRate(S,7))+'로 운으로 생길 범위('+pp(r7.lo)+' ~ '+pp(r7.hi)+')보다 아래입니다. 30일 판정('+(a30?md(a30)+'쯤':'더 모인 뒤')+')까지 보되 문구를 다시 볼 때입니다.');
+      else mark('=','warn','7일 판정 — 아직 차이가 없습니다','7일 안 두 번째 주문 문자 보내기 전 '+pc(p7)+' → 받은 사람 '+pc(nextRate(S,7))+', 차이 '+pp(r7.d)+'는 운으로 생길 범위('+pp(r7.lo)+' ~ '+pp(r7.hi)+') 안입니다. 30일 판정은 '+(a30?md(a30)+'쯤':'더 모인 뒤')+'입니다.');
+    } else {
+      mark('…','warn','판정 전 · 받은 사람 '+fmt(S.people||0)+'명','7일 판정은 받은 사람 '+fmt(need)+'명(7일 지남) 중 '+fmt(S.mature7||0)+'명'+(a7?' · '+md(a7)+'쯤':'')+', 30일 판정은 '+fmt(S.mature30||0)+'명'+(a30?' · '+md(a30)+'쯤':'')+'입니다. 비교할 \'전\' 손님('+fmt(bc(7).n)+'명)은 이미 있고, 그 전 숫자는 운으로 오르내려 성공·실패로 읽지 않습니다.');
+    }
+    if(live){
+      const tagN=(x,r)=>x.adj&&r.lo>0&&x.lo<=0&&x.hi>=0?['아직 모름','warn','flat']:tag(x);
+      const c30=ready30?tagN(n30,r30):null, c7=ready7?tagN(n7,r7):null, ck=ready30?o30:o7, ckd=ready30?30:7, up=!!ck&&ck.lo>0;
+      $('#nextTilesTitle').textContent='받은 사람과 문자 보내기 전 1년 ('+md(L.from)+'부터)';
+      $('#nextTiles').innerHTML=[
+        tile('늘어난 매출 (어림)',gain!=null?sman(gain):'—',gain!=null?'30일 지난 받은 사람 '+fmt(S.mature30)+'명 × 두 번째 주문 '+pp(n30.d)+(n30.adj?'(못 받은 손님 오른 몫 뺌)':'')+' × 산 사람 1인 '+man(avg)+' · 범위 '+sman(gLo)+' ~ '+sman(gHi):'30일 지난 사람 중 산 사람이 생기면 나옵니다',c30?c30[0]:'판정 전',c30?c30[2]:'warn'),
+        tile('30일 안 두 번째 주문',S.mature30?pc(p30)+' → '+pc(nextRate(S,30)):'—',r30?'문자 보내기 전 1년 → 받은 사람 · 차이 '+pp(r30.d)+' (범위 '+pp(r30.lo)+' ~ '+pp(r30.hi)+')':'30일 지난 사람이 생기면 나옵니다',c30?c30[0]:'',c30?c30[2]:'flat'),
+        tile('7일 안 두 번째 주문 (빠른 판정)',S.mature7?pc(p7)+' → '+pc(nextRate(S,7)):'—',r7?'문자 보내기 전 1년 → 받은 사람 · 차이 '+pp(r7.d)+' (범위 '+pp(r7.lo)+' ~ '+pp(r7.hi)+')':'7일 지난 사람이 생기면 나옵니다',c7?c7[0]:'',c7?c7[2]:'flat'),
+        tile('확인 — 문자 못 받은 손님',ck?pc(rate(bf(ckd)))+' → '+pc(nextRate(O,ckd)):'—',ck?'같은 기간 못 받은 손님(대부분 광고 문자 거부) '+ckd+'일 안 두 번째 주문 · 전 1년 → 지금 · '+pp(ck.d)+(up?' — 다 같이 오른 몫이 있어 판정에서 그만큼 뺍니다':' — 전과 비슷해 다른 이유로 다 같이 오른 것은 아닙니다'):'7일 지난 사람이 생기면 나옵니다',ck?(up?'올랐음':'그대로'):'',ck?(up?'warn':'flat'):'flat')
+      ].join('');
+      const bar=(x,n)=>'<div class="bar"><i style="width:'+(n?Math.min(100,x/n*100):0).toFixed(1)+'%"></i></div>';
+      $('#nextProg').classList.remove('hidden');
+      $('#nextProg').innerHTML='<b>7일 판정</b> — 받은 사람 '+fmt(S.mature7||0)+'명 / 필요한 '+fmt(need)+'명(7일 지남, 비교할 전 1년 손님 '+fmt(bc(7).n)+'명)'+(ready7?' · 판정 끝':a7?' · 예상 '+md(a7):'')+bar(S.mature7||0,need)
+        +'<div style="margin-top:12px"><b>30일 판정</b> — 받은 사람 '+fmt(S.mature30||0)+'명 / 필요한 '+fmt(need)+'명(30일 지남, 전 1년 손님 '+fmt(bc(30).n)+'명)'+(ready30?' · 판정 끝':a30?' · 예상 '+md(a30):'')+'</div>'+bar(S.mature30||0,need)
+        +'<div style="margin-top:8px"><span class="situcell">받는 사람이 한 주 약 '+sendWeek.toFixed(1)+'명씩 모이고 있습니다. 같은 기간 문자를 못 받은 손님은 한 주 약 '+otherWeek.toFixed(1)+'명이고 확인용으로만 봅니다.</span></div>';
+    }
+    const share=(s,dd)=>s&&s['mature'+dd]?pc(nextRate(s,dd))+' <span class="situcell">'+fmt(s['mature'+dd])+'명 중 '+fmt(s['reordered'+dd]||0)+'명</span>':'<span class="situcell">'+dd+'일 지난 사람 없음</span>';
+    const fixed=o=>o&&o.n?pc(o.x/o.n)+' <span class="situcell">'+fmt(o.n)+'명 중 '+fmt(o.x)+'명</span>':'—';
+    const per=(s,dd)=>{const v=nextRev(s,dd);return v?man(v.m):'<span class="situcell">'+dd+'일 지난 사람 없음</span>';};
+    const range=x=>x?pp(x.d)+' <span class="situcell">'+pp(x.lo)+' ~ '+pp(x.hi)+'</span>':'—';
+    $('#nextCmpTitle').textContent=live?'받은 사람과 문자 보내기 전 1년':'문자 없을 때 (문자 보내기 전 1년)';
+    $('#nextCmpNote').textContent=live?'판정은 왼쪽 세 칸(전 1년 동의 손님 → 받은 사람)입니다. 오른쪽 세 칸은 같은 기간 다 같이 올랐는지 보는 확인용입니다':'광고 문자 동의 손님이 비교 기준입니다. 거부 손님은 오르는 흐름이라 확인용으로만 씁니다';
+    if(live){
+      $('#nextCmpHead').innerHTML='<tr><th>항목</th><th>전 1년 동의 손님</th><th>받은 사람</th><th>차이 (운으로 생길 범위)</th><th>전 1년 거부 손님</th><th>같은 기간 못 받은 사람</th><th>차이 (확인용)</th></tr>';
+      $('#nextCmpBody').innerHTML=[
+        ['사람',fmt(bc(7).n)+'명',fmt(S.people||0)+'명','—',fmt(bf(7).n)+'명',fmt(O.people||0)+'명','—'],
+        ['7일 안 두 번째 주문',fixed(bc(7)),share(S,7),range(r7),fixed(bf(7)),share(O,7),range(o7)],
+        ['14일 안 두 번째 주문',fixed(bc(14)),share(S,14),range(r14),fixed(bf(14)),share(O,14),range(o14)],
+        ['30일 안 두 번째 주문',fixed(bc(30)),share(S,30),range(r30),fixed(bf(30)),share(O,30),range(o30)],
+        ['30일 안 1인 결제','—',per(S,30),'—','—',per(O,30),'—']
+      ].map(l=>'<tr><td class="expname">'+esc(l[0])+'</td><td>'+l.slice(1).join('</td><td>')+'</td></tr>').join('');
+    } else {
+      $('#nextCmpHead').innerHTML='<tr><th>항목</th><th>전 1년 동의 손님 ('+esc(period)+')</th><th>전 1년 거부 손님</th><th>'+esc(md(L.window&&L.window.from))+'부터 처음 산 회원 전체</th></tr>';
+      $('#nextCmpBody').innerHTML=[
+        ['보낼 날이 지난 사람',fmt(bc(7).n)+'명 <span class="situcell">그 전에 또 산 '+fmt((B.consent&&B.consent.early)||0)+'명 빼고</span>',fmt(bf(7).n)+'명',fmt(N.people||0)+'명 <span class="situcell">그 전에 또 산 '+fmt(L.early||0)+'명 · 보낼 날 전 '+fmt(L.waiting||0)+'명 빼고</span>'],
+        ['7일 안 두 번째 주문',fixed(bc(7)),fixed(bf(7)),share(N,7)],
+        ['14일 안 두 번째 주문',fixed(bc(14)),fixed(bf(14)),share(N,14)],
+        ['30일 안 두 번째 주문',fixed(bc(30)),fixed(bf(30)),share(N,30)],
+        ['30일 안 1인 결제','—','—',per(N,30)]
+      ].map(l=>'<tr><td class="expname">'+esc(l[0])+'</td><td>'+l.slice(1).join('</td><td>')+'</td></tr>').join('');
+    }
+    const lead=E.story||'처음 산 회원에게 받고 사흘 뒤 문자 한 통을 보내자';
+    const span=esc(md(L.from||''))+' ~ '+esc(md(L.window&&L.window.to||today));
+    $('#nextStory').innerHTML=ready30&&n30.lo>0
+      ?'<b>성공 사례로 남길 문장</b><br>'+esc(lead)+', 문자를 받은 분은 30일 안에 '+pc(nextRate(S,30))+'가 두 번째로 샀습니다. 문자를 보내기 전 1년 같은 조건의 손님은 '+pc(p30)+'였습니다('+span+' 받은 분 '+fmt(S.mature30)+'명 · 전 1년 '+fmt(bc(30).n)+'명). '+(n30.adj?'같은 기간 문자를 못 받은 손님도 '+pp(o30.d)+' 올라 그만큼 빼도 문자 몫은 '+pp(n30.d)+'이고, ':'')+'시험 동안 늘어난 매출은 약 '+(gain!=null?man(gain):'—')+'입니다.'
+      :ready7&&n7.lo>0
+      ?'<b>성공 사례로 남길 문장 (7일 판정)</b><br>'+esc(lead)+', 문자를 받은 분은 7일 안에 '+pc(nextRate(S,7))+'가 두 번째로 샀습니다. 문자를 보내기 전 1년 같은 조건의 손님은 '+pc(p7)+'였습니다('+span+' 받은 분 '+fmt(S.mature7)+'명 · 전 1년 '+fmt(bc(7).n)+'명). '+(n7.adj?'같은 기간 문자를 못 받은 손님도 '+pp(o7.d)+' 올라 그만큼 빼도 문자 몫은 '+pp(n7.d)+'입니다. ':'')+(ready30?(n30.adj&&r30.lo>0?'30일 안은 못 받은 손님도 같이 올라 아직 가려지지 않았습니다.':'다만 30일 안으로 보면 차이가 운으로 생길 범위 안이라, 두 번째 주문을 늘렸다기보다 앞당긴 효과입니다.'):'30일 판정이 나면 매출까지 넣어 다시 씁니다.')
+      :'<b>성공 사례로 남길 문장</b> — 판정이 나면 여기에 숫자를 채워 만들어집니다.<br>'+esc(lead)+', 문자를 받은 분은 30일 안에 □%가 두 번째로 샀습니다. 문자를 보내기 전 1년 같은 조건의 손님은 '+pc(p30)+'였습니다(기간, 받은 분 □명 · 전 1년 '+fmt(bc(30).n)+'명). 시험 동안 늘어난 매출은 약 □원입니다.';
+    const cell=(s,dd)=>s&&s['mature'+dd]?fmt(s['reordered'+dd]||0)+' <span class="situcell">/ '+fmt(s['mature'+dd])+'</span>':s&&s.people?'<span class="situcell">'+dd+'일 안 됨</span>':'—';
+    const rows=rounds.slice().reverse();
+    $('#nextDayTitle').textContent=live?'회차별 (받은 사람 · 같은 회차 못 받은 사람)':'회차별 (문자를 보냈다면 받았을 날 기준)';
+    if(live){
+      $('#nextDayHead').innerHTML='<tr><th>회차</th><th>받은 사람</th><th>못 받은 사람</th><th>받은 사람 7일 안 산 사람</th><th>못 받은 사람 7일 안</th><th>받은 사람 30일 안</th><th>못 받은 사람 30일 안</th></tr>';
+      $('#nextDayBody').innerHTML=rows.map(r=>{const o=r.other||{};return '<tr><td>'+esc(md(r.date))+'('+wd(r.date)+')</td><td>'+fmt(r.send.people||0)+'명</td><td>'+fmt(o.people||0)+'명</td><td>'+cell(r.send,7)+'</td><td>'+cell(o,7)+'</td><td>'+cell(r.send,30)+'</td><td>'+cell(o,30)+'</td></tr>';}).join('');
+    } else {
+      $('#nextDayHead').innerHTML='<tr><th>회차</th><th>보냈다면 받았을 사람</th><th>7일 안 산 사람</th><th>14일 안</th><th>30일 안</th></tr>';
+      $('#nextDayBody').innerHTML=rows.map(r=>'<tr><td>'+esc(md(r.date))+'('+wd(r.date)+')</td><td>'+fmt(r.none.people||0)+'명</td><td>'+cell(r.none,7)+'</td><td>'+cell(r.none,14)+'</td><td>'+cell(r.none,30)+'</td></tr>').join('');
+    }
+    $('#nextFoot').innerHTML='<b>세는 법</b> — 처음 산 회원은 카페24가 \'첫 주문\'으로 표시한 주문을 낸 회원입니다(비회원 주문은 빠짐). 보낼 날은 첫 주문 5일 뒤 처음 오는 화·금 오후 4시(받고 사흘쯤 뒤)이고, 그 전에 이미 또 산 회원은 셈에서 뺍니다. '
+      +'두 번째 주문은 보낸 시각 뒤 7·14·30일 안에 주문해 결제가 끝나고 취소되지 않은 주문(메뉴 상관없이)이고, 매출은 그 결제액입니다. 날이 다 안 찬 사람은 그 칸에서 아직 세지 않습니다. '
+      +'비교 기준인 \'전 1년\' 숫자는 카페24 관리자 회원 정보 조회에서 '+esc(B.from||'')+' ~ '+esc(B.to||'')+' 화·금 회차마다 그 회차에 들어갔을 첫 구매 회원(화요일은 첫 주문 8~5일 뒤, 금요일은 7~5일 뒤)을 모바일 메시지 수신허용·수신안함으로 나눠, 회차 날 전에 또 산 회원을 빼고 회차 날부터 7·14·30일 안에 실주문이 2건이 된 회원을 센 값입니다(날짜 단위, 동의 여부는 '+esc(B.asOf||'')+' 기준, 30일은 '+esc(B.to30||'')+' 회차까지). '
+      +(live
+        ?'받은 사람은 회차마다 등록한 그 회차 광고 문자 동의 첫 구매 회원 전원이고(한 사람은 한 번만, 회원 아이디는 저장하지 않고 가명만 남김), 못 받은 사람은 같은 규칙으로 그 회차에 들어가지만 등록되지 않은 첫 구매 회원입니다(대부분 광고 문자를 받지 않는 분). 판정은 받은 사람과 전 1년 동의 손님으로 하고, 못 받은 사람은 그 사이 다른 이유(새 화면·광고 같은)로 다 같이 올랐는지 보는 데만 씁니다. 운으로 생길 범위는 같은 사람 수로 다시 나눴을 때 100번 중 95번 들어오는 폭입니다. '
+        :'시작 전 서버 숫자는 광고 문자 동의 여부와 상관없이 처음 산 회원 전체로 셉니다(서버는 동의 여부를 모름). 시작하면 회차마다 동의 회원 전원을 등록합니다. ')
+      +'매일 자동 재구매 문자가 켜지면 받은 사람만 그 문자도 받아, 30일 숫자에는 그 효과가 함께 들어갑니다. '
+      +'주문 자료는 사무실 PC가 20분마다 보내는 카페24 주문 가명 통계로 '+esc(L.through||'—')+'까지 반영됐습니다'+(L.stale?' — 1시간 넘게 새 자료가 안 와 그 뒤 주문은 아직 안 셌습니다(사무실 PC가 꺼지면 멈춤)':'')+'. '
+      +(E.liveUrl?'이 화면을 열면 숫자를 그 자리에서 받고, 열어 둔 동안 10분마다 다시 받습니다.':'')
+      +(E.error?'<br><b>알림</b> — '+esc(E.error):'');
+    return;
+  }
   if(E.mode==='allin'){
     const O=L.arms.other||{}, G=E.compare||null, halfNeed=E.halfNeed||100;
     const p7=nextRate(N,7)!=null&&N.mature7>=20?nextRate(N,7):LR?LR.d7:0.129;
