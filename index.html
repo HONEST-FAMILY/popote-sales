@@ -152,6 +152,7 @@
   .state{padding:48px 20px;text-align:center;color:var(--muted);font-size:14px}
   .hidden{display:none!important}
   @media (max-width:720px){ .tiles,.refcard .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px} }
+  @media (max-width:480px){ .tabs{gap:0;flex-wrap:wrap} .tab{flex:none;white-space:nowrap;font-size:14px;padding:12px 10px 10px} }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -249,7 +250,7 @@
       </section>
       <section>
         <div class="sec-h"><h2>날짜별</h2></div>
-        <div class="card scroll"><table><thead><tr><th>날짜</th><th>카드 본 사람</th><th>관심 있어요</th><th>6팩</th><th>10팩</th></tr></thead><tbody id="intDayBody"></tbody></table></div>
+        <div class="card scroll"><table><thead><tr><th>날짜</th><th>카드 본 사람</th><th>관심 있어요</th><th>취소</th><th>6팩</th><th>10팩</th></tr></thead><tbody id="intDayBody"></tbody></table></div>
       </section>
       <div class="footnote" id="intFoot" style="margin-top:8px"></div>
     </div>
@@ -1063,8 +1064,8 @@ function renderInterest(){
   }
   const all=(L.daily||[]).filter(r=>!I.from||r.date>=I.from), rows=all.filter(r=>!end||r.date<=end);
   const sum=k=>rows.reduce((s,r)=>s+(r[k]||0),0);
-  const seen=sum('viewers'), wanted=sum('clickers'), p6=sum('pack6'), p10=sum('pack10'), picked=p6+p10, passed=seen>0&&wanted/seen>=goal;
-  const later=all.filter(r=>end&&r.date>end).reduce((s,r)=>s+(r.clickers||0),0);
+  const seen=sum('viewers'), off=sum('cancels'), wanted=Math.max(0,sum('clickers')-off), p6=sum('pack6'), p10=sum('pack10'), picked=p6+p10, passed=seen>0&&wanted/seen>=goal;
+  const after=all.filter(r=>end&&r.date>end), later=after.reduce((s,r)=>s+(r.clickers||0),0), laterOff=after.reduce((s,r)=>s+(r.cancels||0),0);
   const line='카드를 본 '+fmt(seen)+'명 중 '+fmt(wanted)+'명('+pc(wanted,seen)+')이 \'관심 있어요\'를 눌렀습니다';
   if(!started) mark('…','','시작 전입니다',(I.from?md(I.from)+'부터':'시작일을 넣으면')+' 카드를 본 사람과 누른 사람을 셉니다.');
   else if(!done) mark('…','','판정 전 · '+dayN+'일째',line+'. '+md(end)+'까지 세어 본 사람의 '+want+' 이상이 누르면 위탁생산 견적을 받고, 못 넘으면 카드를 내립니다.');
@@ -1072,14 +1073,14 @@ function renderInterest(){
   else mark('✕','bad','기준에 못 미쳤습니다',line+'. 기준 '+want+' 아래라 카드를 내립니다.');
   $('#intTiles').innerHTML=
     tile('카드 본 사람',fmt(seen)+'명',started?'하루 평균 '+(seen/Math.max(1,dayN)).toFixed(1)+'명':'')+
-    tile('관심 있어요',fmt(wanted)+'명','본 사람의 '+pc(wanted,seen),'기준 '+want,passed?'good':'flat')+
+    tile('관심 있어요',fmt(wanted)+'명','본 사람의 '+pc(wanted,seen)+(off?' · 취소 '+fmt(off)+'명 뺌':''),'기준 '+want,passed?'good':'flat')+
     tile('6팩',fmt(p6)+'명','구성을 고른 사람의 '+pc(p6,picked))+
     tile('10팩',fmt(p10)+'명','구성을 고른 사람의 '+pc(p10,picked));
   const prog=$('#intProg');
   prog.classList.toggle('hidden',!started);
-  prog.innerHTML=started?'2주 중 '+dayN+'일 지남 · '+md(end)+'까지 센 숫자로 판정합니다'+(later?' · '+md(end)+' 뒤에 누른 '+fmt(later)+'명은 판정에 넣지 않았습니다':'')+'<div class="bar"><i style="width:'+Math.round(dayN/days*100)+'%"></i></div>':'';
-  $('#intDayBody').innerHTML=all.slice().reverse().map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+fmt(r.viewers||0)+'</td><td>'+fmt(r.clickers||0)+'</td><td>'+fmt(r.pack6||0)+'</td><td>'+fmt(r.pack10||0)+'</td></tr>').join('');
-  $('#intFoot').innerHTML='<b>세는 법</b> — 추천 메뉴 화면 맨 아래 카드(\''+esc(I.card||'')+'\')가 화면 아래 담기 막대에 가리지 않고 반 이상 1초 보인 브라우저를 \'카드 본 사람\'으로, [관심 있어요]를 누른 브라우저를 \'관심 있어요\'로 셉니다. 같은 브라우저는 여러 번 와도 1명이고, 처음 본 날·처음 누른 날에 셉니다. 구성은 마지막에 고른 것 하나로 셉니다. 검수 방문은 빠지고, 이름·연락처는 받지 않습니다. '+(I.liveUrl?'이 화면을 열면 숫자를 그 자리에서 받고, 열어 둔 동안 10분마다 다시 받습니다.':'')+(I.error?'<br><b>알림</b> — '+esc(I.error):'');
+  prog.innerHTML=started?'2주 중 '+dayN+'일 지남 · '+md(end)+'까지 센 숫자로 판정합니다'+(later||laterOff?' · '+md(end)+' 뒤에 '+[later?'누른 '+fmt(later)+'명':'',laterOff?'취소한 '+fmt(laterOff)+'명':''].filter(Boolean).join('·')+'은 판정에 넣지 않았습니다':'')+'<div class="bar"><i style="width:'+Math.round(dayN/days*100)+'%"></i></div>':'';
+  $('#intDayBody').innerHTML=all.slice().reverse().map(r=>'<tr><td>'+esc(r.date)+'</td><td>'+fmt(r.viewers||0)+'</td><td>'+fmt(r.clickers||0)+'</td><td>'+fmt(r.cancels||0)+'</td><td>'+fmt(r.pack6||0)+'</td><td>'+fmt(r.pack10||0)+'</td></tr>').join('');
+  $('#intFoot').innerHTML='<b>세는 법</b> — 추천 메뉴 화면 맨 아래 카드(\''+esc(I.card||'')+'\')가 화면 아래 담기 막대에 가리지 않고 반 이상 1초 보인 브라우저를 \'카드 본 사람\'으로, [관심 있어요]를 누른 브라우저를 \'관심 있어요\'로 셉니다. 손님이 같은 버튼을 한 번 더 눌러 취소하면 그날 \'취소\' 칸에 세고 \'관심 있어요\'에서 뺍니다. 같은 브라우저는 여러 번 와도 1명이고, 처음 본 날·누른 날에 셉니다. 구성은 지금 골라 둔 것 하나로 셉니다. 로그인하지 않아도 누를 수 있고, 검수 방문은 빠지고, 이름·연락처는 받지 않습니다. '+(I.liveUrl?'이 화면을 열면 숫자를 그 자리에서 받고, 열어 둔 동안 10분마다 다시 받습니다.':'')+(I.error?'<br><b>알림</b> — '+esc(I.error):'');
 }
 
 let intBusy=false, intAt=0, intOn=false;
