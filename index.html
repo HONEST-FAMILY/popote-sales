@@ -720,10 +720,36 @@ function startLive(){
 
 const kstToday=()=>new Date(Date.now()+9*3600000).toISOString().slice(0,10);
 function expPV(s){const n=s&&s.mature||0;if(!n)return null;const m=(s.revenue||0)/n;return {n,m,v:n>1?Math.max(0,((s.revenue_sq||0)-n*m*m)/(n-1)):0};}
+const EXP_LIFT=1/3, EXP_Z=1.959964+0.841621;
+function expNeedM(M,Q,prop){
+  if(!(M>0)||!(Q>0)) return null;
+  const M1=M*(1+EXP_LIFT), Q1=Q*(1+EXP_LIFT);
+  if(prop&&M1>.95) return null;
+  return 2*Math.ceil(EXP_Z*EXP_Z*(Math.max(0,Q-M*M)+Math.max(0,Q1-M1*M1))/((M1-M)*(M1-M)));
+}
 function expNeed(s){
   if(!s||(s.buyers||0)<20||!s.mature) return null;
-  const p0=s.buyers/s.mature, mu=s.revenue/s.buyers, m2=(s.revenue_sq/s.buyers)/(mu*mu), p1=Math.min(.95,p0*4/3), Z=1.959964+0.841621;
-  return {n:2*Math.ceil(Z*Z*((p0*m2-p0*p0)+(p1*m2-p1*p1))/((p1-p0)*(p1-p0))),p0,p1};
+  const p0=s.buyers/s.mature;
+  return {n:expNeedM(s.revenue/s.mature,s.revenue_sq/s.mature),p0,p1:Math.min(.95,p0*(1+EXP_LIFT))};
+}
+function expNeedCart(s){
+  if(!s||(s.carts||0)<20||!s.visitors) return null;
+  const p0=s.carts/s.visitors;
+  return {n:expNeedM(p0,p0,true),p0,p1:p0*(1+EXP_LIFT)};
+}
+function expSum(...ss){const o={};['visitors','carts','mature','buyers','revenue','revenue_sq'].forEach(k=>{o[k]=ss.reduce((t,s)=>t+((s&&s[k])||0),0);});return o;}
+function expProject(N,perDay,ads,start,spend){
+  if(!(perDay>0)||!N||!N.visitors||!N.mature) return null;
+  const o={c:N.carts/N.visitors,M:N.revenue/N.mature,Q:N.revenue_sq/N.mature};
+  const a=ads&&ads.perDay>0?{n:ads.perDay,from:ads.from||start,c:ads.cart||0,M:(ads.buy||0)*(ads.aov||0),Q:(ads.buy||0)*(ads.aov||0)*(ads.aov||0)*(1+Math.pow(ads.cv||0.485,2))}:null;
+  let no=0,na=0,cart=null,rev=null;
+  for(let i=1;i<=1500&&(cart==null||rev==null);i++){
+    no+=perDay;if(a&&shift(start,i-1)>=a.from)na+=a.n;
+    const t=no+na, c=(no*o.c+na*(a?a.c:0))/t, M=(no*o.M+na*(a?a.M:0))/t, Q=(no*o.Q+na*(a?a.Q:0))/t;
+    if(cart==null){const n=expNeedM(c,c,true);if(n&&t>=n)cart=i;}
+    if(rev==null){const n=expNeedM(M,Q);if(n&&t>=n)rev=i+spend;}
+  }
+  return {cart,rev};
 }
 function expProp(x1,n1,x2,n2){
   if(!n1||!n2) return null;
@@ -761,21 +787,27 @@ function renderExperiment(){
   const A=L.arms.A||{}, B=L.arms.B||{}, N=L.arms.none||{}, live=started&&!!L.from, spend=L.spendDays||7;
   const past=(L.daily||[]).filter(r=>r.date<today&&(!live||r.date>=L.from)).slice(-14);
   const perDay=past.length?past.reduce((s,r)=>s+(live?r.A.visitors+r.B.visitors:r.none.visitors),0)/past.length:0;
-  const dyn=expNeed(N), needN=live?(E.need||0):((dyn&&dyn.n)||E.need||0);
+  const P=expSum(A,B), dyn=expNeed(N), dynC=expNeedCart(N), liveR=live?expNeed(P):null, liveC=live?expNeedCart(P):null;
+  const needN=live?((liveR&&liveR.n)||E.need||0):((dyn&&dyn.n)||E.need||0), needC=live?((liveC&&liveC.n)||0):((dynC&&dynC.n)||0);
   const a=expPV(live?A:N), b=live?expPV(B):null;
   const cart=live?expProp(A.carts||0,A.visitors||0,B.carts||0,B.visitors||0):null;
   const buy=live?expProp(A.buyers||0,A.mature||0,B.buyers||0,B.mature||0):null;
   const rep=live?expProp(A.repeated||0,A.repeat_base||0,B.repeated||0,B.repeat_base||0):null;
   const se=a&&b?Math.sqrt(a.v/a.n+b.v/b.n):null, d=se!=null?b.m-a.m:null, lo=se!=null?d-1.96*se:null, hi=se!=null?d+1.96*se:null;
   const collected=(A.mature||0)+(B.mature||0), arrived=(A.visitors||0)+(B.visitors||0);
-  const ready=live&&needN>0&&collected>=needN&&se!=null;
+  const ready=live&&needN>0&&collected>=needN&&se!=null, cartReady=live&&needC>0&&arrived>=needC&&!!cart;
   const month=d!=null?d*perDay*30:null, gain=d!=null?d*(B.mature||0):null;
-  let tone='warn', chip='판정 전';
+  const md=s=>s?s.slice(5).replace('-','/'):'';
+  let tone='warn', chip='판정 전', cTone='warn', cChip='';
   if(!live){
-    const days=perDay>0&&needN?Math.ceil(needN/perDay)+spend:null;
+    const start=E.from&&E.from>today?E.from:today;
+    const base=expProject(N,perDay,null,start,spend), fast=E.ads?expProject(N,perDay,E.ads,start,spend):null;
+    const two=p=>'담기 판정 '+(p&&p.cart?span(p.cart):'—')+' · 매출 판정 '+(p&&p.rev?span(p.rev):'—');
+    const adTxt=E.ads?(E.ads.label||'광고 손님')+'(하루 약 '+fmt(E.ads.perDay||0)+'명'+(E.ads.from?', '+md(E.ads.from)+'부터':'')+')':'';
     mark('…','warn','아직 시작 전입니다'+(E.status?' — '+E.status:''),
-      '시작하면 이 화면에 처음 온 손님을 동전 던지듯 반으로 나눠, '+nB+' 화면을 본 반과 '+nA+'을 본 반이 들어온 뒤 7일 안에 쓴 돈을 비교합니다. '
-      +(days?'지금 이 화면에는 하루 약 '+Math.round(perDay)+'명이 처음 들어와, 두 반 합계 '+fmt(needN)+'명이 모이고 마지막 손님의 7일이 지나기까지 '+span(days)+' 걸립니다. 그때 성공인지 판정합니다.':'아직 판정 손님 수를 잴 만큼 기록이 쌓이지 않았습니다.'));
+      '시작하면 이 화면에 처음 온 손님을 동전 던지듯 반으로 나눠 '+nB+' 화면을 본 반과 '+nA+'을 본 반을 비교합니다. 담기를 누른 비율은 손님이 모이는 대로, 들어온 뒤 7일 안에 쓴 돈은 7일 뒤에 판정합니다. '
+      +(base?'지금 이 화면 손님(하루 약 '+Math.round(perDay)+'명)만으로는 '+two(base)+' 걸립니다.':'아직 판정 손님 수를 잴 만큼 기록이 쌓이지 않았습니다.')
+      +(base&&fast?' '+adTxt+'이 이 화면으로 오면 '+two(fast)+'로 줄어듭니다.':''));
     $('#expTilesTitle').textContent='지금 화면 기준값 (최근 '+(L.baseDays||28)+'일)';
     $('#expTiles').innerHTML=[
       tile('이 화면에 처음 온 손님',perDay?'하루 '+(perDay<10?perDay.toFixed(1):Math.round(perDay))+'명':'—','최근 2주 하루 평균 · '+(L.baseDays||28)+'일 합계 '+fmt(N.visitors||0)+'명 · 검수 방문 빼고',nA),
@@ -784,27 +816,38 @@ function renderExperiment(){
       tile('손님 100명당 매출',a?man(a.m*100):'—','7일 안 결제 합계 · 메뉴 상관없이',nA)
     ].join('');
     $('#expProg').classList.remove('hidden');
-    $('#expProg').innerHTML='<b>판정에 필요한 손님</b> — 두 반 합계 '+(needN?fmt(needN)+'명':'아직 모름')+'. '
-      +(dyn?'사는 손님이 지금('+(dyn.p0*100).toFixed(1)+'%)보다 3분의 1 늘었을 때('+(dyn.p1*100).toFixed(1)+'%) 운이 아니라고 가려낼 수 있는 수입니다. ':'')
-      +(days?'지금 속도면 시작 뒤 '+span(days)+'. 효과가 이보다 작으면 더 오래 걸리고, 이 화면에 오는 손님이 늘면 그만큼 짧아집니다. 시작하는 날 이 수를 고정해 두고 판정합니다.':'');
+    $('#expProg').innerHTML='<b>판정에 필요한 손님</b> — 지금 손님 기준 담기 판정 두 반 합계 '+(needC?fmt(needC)+'명':'아직 모름')+', 매출 판정 '+(needN?fmt(needN)+'명(7일 지난 손님)':'아직 모름')+'. '
+      +(dynC&&dyn?'담기 누른 손님('+(dynC.p0*100).toFixed(1)+'%)과 사는 손님('+(dyn.p0*100).toFixed(1)+'%)이 3분의 1 늘었을 때 운이 아니라고 가려낼 수 있는 수입니다. 효과가 이보다 작으면 더 오래 걸립니다.':'')
+      +(base?'<br>지금 손님만: '+two(base)+'.':'')
+      +(base&&fast?'<br>'+esc(adTxt)+'이 오면: '+two(fast)+'. 광고 손님은 담기 '+Math.round((E.ads.cart||0)*100)+'%, 7일 안 구매 '+((E.ads.buy||0)*100).toFixed(1)+'%로 잡은 값이고, 덜 사는 손님이 섞이는 만큼 필요한 손님 수를 늘려 셈했습니다.':'')
+      +'<br>시작한 뒤에는 두 반을 합친 숫자로 필요한 손님 수를 매일 다시 셉니다(어느 반이 앞서는지는 보지 않음).';
   } else {
     const left=Math.max(0,needN-arrived), days=perDay>0?Math.ceil(left/perDay)+spend:null, when=days!=null?shift(today,days):null;
+    const daysC=perDay>0&&needC?Math.ceil(Math.max(0,needC-arrived)/perDay):null, whenC=daysC!=null?shift(today,daysC):null;
+    const revNext=when?' 매출 판정은 '+md(when)+'쯤입니다.':'';
+    const cartTxt=nA+' '+pc(A.carts||0,A.visitors||0)+', '+nB+' '+pc(B.carts||0,B.visitors||0);
     if(!arrived&&(N.visitors||0)) mark('!','bad','반 표시가 없습니다','시작일 뒤 이 화면에 들어온 손님 '+fmt(N.visitors)+'명에 반 표시가 없어 두 반을 비교할 수 없습니다. 반반 나누기가 켜졌는지 확인하세요.');
     else if(ready&&lo>0){tone='good';chip='성공';mark('✓','good','성공 — '+nB+' 반 손님 100명당 '+man(d*100)+' 더 샀습니다','두 반 합계 '+fmt(collected)+'명이 모였고, 100명당 '+sman(d*100)+' 차이는 운으로 생길 범위('+sman(lo*100)+' ~ '+sman(hi*100)+')를 넘었습니다. 모든 손님에게 켜면 한 달 약 '+man(month)+'을 더 팔 수 있습니다.');}
     else if(ready&&hi<0){tone='bad';chip='실패';mark('✕','bad','실패 — '+nB+' 반 손님 100명당 '+man(-d*100)+' 덜 샀습니다','두 반 합계 '+fmt(collected)+'명 기준이고, 운으로 생길 범위('+sman(lo*100)+' ~ '+sman(hi*100)+')보다도 아래입니다. 끄는 게 맞습니다.');}
     else if(ready){chip='차이 없음';mark('=','warn','차이 없음 — 늘었다고 볼 만큼 차이가 나지 않았습니다','두 반 합계 '+fmt(collected)+'명 기준 100명당 '+sman(d*100)+' 차이는 운으로 생길 범위('+sman(lo*100)+' ~ '+sman(hi*100)+') 안입니다.');}
-    else if(cart&&arrived>=200&&cart.hi<0){tone='bad';chip='주의';mark('!','bad','담는 손님이 줄었습니다 — 끄기를 검토하세요',nB+' 반에서 담기를 누른 손님이 '+pc(B.carts,B.visitors)+'로 '+nA+' 반('+pc(A.carts,A.visitors)+')보다 운으로 생길 범위를 넘게 적습니다.');}
-    else mark('…','warn','아직 판정 전입니다','두 반 합계 '+fmt(needN)+'명 중 '+fmt(collected)+'명(7일 지난 손님)이 모였습니다('+(needN?Math.min(100,Math.round(collected/needN*100)):0)+'%).'+(when?' 지금 속도면 '+when.slice(5).replace('-','/')+'쯤 판정합니다.':'')+' 그 전 숫자는 운으로 오르내려 성공·실패로 읽지 않습니다.');
+    else if(cartReady&&cart.hi<0){cTone='bad';cChip='담기 실패';mark('✕','bad','담기 판정 실패 — 담는 손님이 줄었습니다','두 반 합계 '+fmt(arrived)+'명 기준 담기를 누른 손님이 '+cartTxt+'로, 운으로 생길 범위('+pp(cart.lo)+' ~ '+pp(cart.hi)+')를 넘게 적습니다. 끄는 게 맞습니다.');}
+    else if(cart&&arrived>=200&&cart.hi<0){cTone='bad';cChip='주의';mark('!','bad','담는 손님이 줄었습니다 — 끄기를 검토하세요',nB+' 반에서 담기를 누른 손님이 '+pc(B.carts,B.visitors)+'로 '+nA+' 반('+pc(A.carts,A.visitors)+')보다 운으로 생길 범위를 넘게 적습니다.');}
+    else if(cartReady&&cart.lo>0){cTone='good';cChip='담기 성공';mark('✓','good','담기 판정 성공 — '+nB+' 반 손님이 담기를 더 눌렀습니다','두 반 합계 '+fmt(arrived)+'명 기준 담기를 누른 손님이 '+cartTxt+'로, 차이 '+pp(cart.d)+'는 운으로 생길 범위('+pp(cart.lo)+' ~ '+pp(cart.hi)+')를 넘었습니다.'+revNext);}
+    else if(cartReady){cChip='담기 차이 없음';mark('=','warn','담기 판정 — 차이가 없습니다','두 반 합계 '+fmt(arrived)+'명 기준 담기 차이 '+pp(cart.d)+'는 운으로 생길 범위('+pp(cart.lo)+' ~ '+pp(cart.hi)+') 안입니다.'+revNext);}
+    else mark('…','warn','아직 판정 전입니다','담기 판정은 두 반 합계 '+(needC?fmt(needC)+'명 중 '+fmt(arrived)+'명('+Math.min(100,Math.round(arrived/needC*100))+'%)'+(whenC?' · '+md(whenC)+'쯤':''):fmt(arrived)+'명 · 필요한 수는 담기가 쌓이면 나옴')+', 매출 판정은 7일 지난 손님 '+fmt(needN)+'명 중 '+fmt(collected)+'명('+(needN?Math.min(100,Math.round(collected/needN*100)):0)+'%)'+(when?' · '+md(when)+'쯤':'')+'입니다. 그 전 숫자는 운으로 오르내려 성공·실패로 읽지 않습니다.');
+    if(!cChip&&cartReady){cChip=cart.lo>0?'담기 성공':cart.hi<0?'담기 실패':'담기 차이 없음';cTone=cart.lo>0?'good':cart.hi<0?'bad':'warn';}
     $('#expTilesTitle').textContent='두 반 결과 ('+L.from+'부터)';
     $('#expTiles').innerHTML=[
       tile('늘어난 매출 (지금까지)',gain!=null?sman(gain):'—',gain!=null?'운으로 생길 범위 '+sman(lo*(B.mature||0))+' ~ '+sman(hi*(B.mature||0)):'7일 지난 손님이 생기면 나옵니다',chip,tone==='good'?'up':tone==='bad'?'down':'warn'),
       tile('손님 100명당 매출',a&&b?man(a.m*100)+' → '+man(b.m*100):'—',nA+' → '+nB+' · 7일 안 결제'),
       tile('7일 안에 산 손님',A.mature&&B.mature?pc(A.buyers||0,A.mature)+' → '+pc(B.buyers||0,B.mature):'—',buy?'차이 '+pp(buy.d)+' (범위 '+pp(buy.lo)+' ~ '+pp(buy.hi)+')':'7일 지난 손님이 생기면 나옵니다'),
-      tile('담기 누른 손님',A.visitors&&B.visitors?pc(A.carts||0,A.visitors)+' → '+pc(B.carts||0,B.visitors):'—',cart?'차이 '+pp(cart.d)+' (범위 '+pp(cart.lo)+' ~ '+pp(cart.hi)+')':'')
+      tile('담기 누른 손님',A.visitors&&B.visitors?pc(A.carts||0,A.visitors)+' → '+pc(B.carts||0,B.visitors):'—',cart?'차이 '+pp(cart.d)+' (범위 '+pp(cart.lo)+' ~ '+pp(cart.hi)+')':'',cChip,cTone==='good'?'up':cTone==='bad'?'down':'warn')
     ].join('');
+    const bar=(x,n)=>'<div class="bar"><i style="width:'+(n?Math.min(100,x/n*100):0).toFixed(1)+'%"></i></div>';
     $('#expProg').classList.remove('hidden');
-    $('#expProg').innerHTML='<b>모인 손님</b> — 7일 지난 손님 '+fmt(collected)+'명 / 판정에 필요한 '+fmt(needN)+'명'+(ready?' · 판정 끝':when?' · 예상 판정일 '+when:'')+(perDay?' · 하루 약 '+Math.round(perDay)+'명':'')
-      +'<div class="bar"><i style="width:'+(needN?Math.min(100,collected/needN*100):0).toFixed(1)+'%"></i></div>';
+    $('#expProg').innerHTML='<b>담기 판정</b> — 두 반 합계 '+fmt(arrived)+'명 / 필요한 '+(needC?fmt(needC)+'명':'—')+(cartReady?' · 판정 끝':whenC?' · 예상 판정일 '+whenC:'')+(perDay?' · 하루 약 '+Math.round(perDay)+'명':'')+bar(arrived,needC)
+      +'<div style="margin-top:12px"><b>매출 판정</b> — 7일 지난 손님 '+fmt(collected)+'명 / 필요한 '+fmt(needN)+'명'+(ready?' · 판정 끝':when?' · 예상 판정일 '+when:'')+'</div>'+bar(collected,needN)
+      +'<div style="margin-top:8px"><span class="situcell">필요한 손님 수는 두 반을 합친 숫자로 매일 다시 셉니다. 광고 손님처럼 덜 사는 손님이 섞이면 그만큼 늘어납니다.</span></div>';
   }
   $('#expCmpNote').textContent=live?'같은 기간에 들어온 손님을 동전으로 나눠 차이는 화면 때문입니다':'시작 전이라 지금 화면만 있습니다';
   $('#expCmpHead').innerHTML='<tr><th>항목</th><th>'+esc(nA)+(live?' (A)':' · 최근 '+(L.baseDays||28)+'일')+'</th><th>'+esc(nB)+(live?' (B)':'')+'</th><th>차이 (운으로 생길 범위)</th></tr>';
@@ -824,6 +867,8 @@ function renderExperiment(){
   const lead=E.story||'이 화면을 바꾸자';
   $('#expStory').innerHTML=ready&&lo>0
     ?'<b>성공 사례로 남길 문장</b><br>'+esc(lead)+', 같은 기간 바뀐 화면을 본 손님 100명당 매출이 '+man(a.m*100)+'에서 '+man(b.m*100)+'으로 '+Math.round(d/a.m*100)+'% 늘었습니다('+esc(L.from)+' ~ '+esc(L.window&&L.window.to||today)+', 손님 '+fmt(collected)+'명). 시험 동안 늘어난 매출은 '+man(gain)+', 모든 손님에게 켜면 한 달 약 '+man(month)+'입니다.'
+    :cartReady&&cart.lo>0&&A.carts
+    ?'<b>성공 사례로 남길 문장 (담기 판정)</b><br>'+esc(lead)+', 같은 기간 바뀐 화면을 본 손님 중 담기를 누른 손님이 '+pc(A.carts,A.visitors)+'에서 '+pc(B.carts||0,B.visitors)+'로 '+Math.round(cart.d/(A.carts/A.visitors)*100)+'% 늘었습니다('+esc(L.from)+' ~ '+esc(L.window&&L.window.to||today)+', 손님 '+fmt(arrived)+'명). 매출 판정이 나면 100명당 매출로 다시 씁니다.'
     :'<b>성공 사례로 남길 문장</b> — 판정이 나면 여기에 숫자를 채워 만들어집니다.<br>'+esc(lead)+', 같은 기간 바뀐 화면을 본 손님 100명당 매출이 □에서 □으로 □% 늘었습니다(기간, 손님 □명). 시험 동안 늘어난 매출은 □, 모든 손님에게 켜면 한 달 약 □입니다.';
   const rows=(L.daily||[]).slice().reverse(), young=s=>(s.mature||0)<(s.visitors||0);
   if(live){
@@ -836,7 +881,7 @@ function renderExperiment(){
   $('#expFoot').innerHTML='<b>세는 법</b> — 손님은 이 화면('+esc(short(E.page))+')에 처음 들어온 브라우저(휴대폰·컴퓨터) 하나를 한 명으로 셉니다. 검수 방문은 빼고, 같은 회원이 두 기기로 들어오면 처음 기기 하나로만 셉니다. '
     +(live?'시작일('+esc(L.from)+')부터':'시작하면')+' 처음 온 브라우저마다 동전을 던져 '+esc(nA)+'(A)과 '+esc(nB)+'(B) 중 하나를 보여 주고, 다시 와도 같은 반입니다. '
     +'매출은 들어온 뒤 7일 안에 그 회원이 결제한 돈 전부(메뉴 상관없이, 결제가 끝나고 취소 안 된 것)이고, 로그인한 회원 결제만 손님에게 이어집니다(비회원 결제는 두 반 모두 똑같이 빠짐). 7일이 안 지난 손님은 산 손님·매출 칸에서 아직 세지 않습니다. '
-    +'판정은 미리 정한 손님 수가 모였을 때 한 번 하고, 운으로 생길 범위는 같은 손님 수로 동전을 다시 던졌을 때 100번 중 95번 들어오는 폭입니다. '
+    +'판정은 두 번 합니다. 담기를 누른 비율은 필요한 손님이 모이면 바로, 매출은 7일이 지난 손님이 필요한 만큼 모이면 합니다. 필요한 손님 수는 두 반을 합친 숫자로 매일 다시 세어(어느 반이 앞서는지는 보지 않음) 광고 손님처럼 덜 사는 손님이 섞이면 늘어나고, 운으로 생길 범위는 같은 손님 수로 동전을 다시 던졌을 때 100번 중 95번 들어오는 폭입니다. '
     +'주문 자료는 사무실 PC가 20분마다 보내는 카페24 주문 가명 통계로 '+esc(L.through||'—')+'까지 반영됐습니다'+(L.stale?' — 1시간 넘게 새 자료가 안 와 그 뒤 결제는 아직 안 셌습니다(사무실 PC가 꺼지면 멈춤)':'')+'. '
     +(L.duplicates||L.conflicts?'같은 회원의 다른 기기 '+fmt(L.duplicates||0)+'개는 빼고, 한 기기에 회원이 둘 이상 붙은 '+fmt(L.conflicts||0)+'개는 결제를 잇지 않았습니다. ':'')
     +(E.liveUrl?'이 화면을 열면 숫자를 그 자리에서 받고, 열어 둔 동안 10분마다 다시 받습니다.':'')
