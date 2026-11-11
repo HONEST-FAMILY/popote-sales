@@ -10,6 +10,7 @@
     --muted:#8a8378; --line:#e7e2d9; --line2:#efeae1;
     --accent:#1f6f8f; --accent-soft:#e4eef2;
     --good:#1a8f5f; --warn:#c07a00; --bad:#c7452f;
+    --ref-sms:#2a78d6; --ref-ord:#eb6834; --ref-pre:#c9c2b6;
     --shadow:0 1px 2px rgba(40,34,24,.05),0 8px 24px rgba(40,34,24,.06);
   }
   @media (prefers-color-scheme:dark){
@@ -18,6 +19,7 @@
       --muted:#7f8893; --line:#2c3139; --line2:#262b33;
       --accent:#59b6d6; --accent-soft:#1a2f38;
       --good:#34c488; --warn:#e0a53a; --bad:#eb6a52;
+      --ref-sms:#3987e5; --ref-ord:#d95926; --ref-pre:#454c57;
       --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
     }
   }
@@ -26,6 +28,7 @@
     --muted:#8a8378; --line:#e7e2d9; --line2:#efeae1;
     --accent:#1f6f8f; --accent-soft:#e4eef2;
     --good:#1a8f5f; --warn:#c07a00; --bad:#c7452f;
+    --ref-sms:#2a78d6; --ref-ord:#eb6834; --ref-pre:#c9c2b6;
     --shadow:0 1px 2px rgba(40,34,24,.05),0 8px 24px rgba(40,34,24,.06);
   }
   :root[data-theme="dark"]{
@@ -33,6 +36,7 @@
     --muted:#7f8893; --line:#2c3139; --line2:#262b33;
     --accent:#59b6d6; --accent-soft:#1a2f38;
     --good:#34c488; --warn:#e0a53a; --bad:#eb6a52;
+    --ref-sms:#3987e5; --ref-ord:#d95926; --ref-pre:#454c57;
     --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
@@ -119,10 +123,6 @@
   .situcell{color:var(--muted);font-size:11.5px}
 
   .mini{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .refcard{padding:14px 16px;margin-top:12px}
-  .refcard .tile{box-shadow:none;background:var(--card2)}
-  .refcard .tiles{grid-template-columns:repeat(3,1fr)}
-  .refcard .chart-sub{margin-bottom:10px}
   .reftest{margin-top:10px;padding:9px 13px;border:1px dashed var(--line);border-radius:10px;font-size:12.5px;color:var(--ink2)}
   .refctl{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex-wrap:wrap}
   .refctl .btn{padding:5px 12px;font-size:12.5px}
@@ -135,6 +135,57 @@
   .refpaths th,.refpaths td{padding:8px 10px;white-space:nowrap}
   .refpaths tbody tr:last-child td{border-bottom:none}
   .refpnote{margin:6px 2px 0;font-size:12px;color:var(--muted)}
+  #refVerdict b,#refVerdict p{word-break:keep-all}
+  .refline{margin-top:8px;font-size:12.5px;color:var(--ink2);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .refline .chip{flex:none}
+  .refbox{padding:16px 16px 12px;margin-top:14px}
+  .refbox .chart-sub{margin-bottom:12px}
+  .refbox .tile{box-shadow:none;background:var(--card2)}
+  .refbox .tiles{margin-bottom:12px}
+  .reffun{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .reffun.one{grid-template-columns:1fr}
+  .fpanel{border:1px solid var(--line2);border-radius:12px;padding:12px 14px 10px;background:var(--card2)}
+  .fhead{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:750;margin-bottom:8px}
+  .fhead i,.refkey i{width:10px;height:10px;border-radius:3px;flex:none;display:inline-block}
+  .fhead small{margin-left:auto;font-size:12px;font-weight:600;color:var(--muted)}
+  .frow{display:grid;grid-template-columns:104px 1fr 84px;align-items:center;gap:10px;padding:5px 0}
+  .fk{font-size:12.5px;color:var(--ink2);line-height:1.3;word-break:keep-all}
+  .ftrack{height:16px;background:var(--line2);border-radius:0 4px 4px 0;overflow:hidden}
+  .ftrack i{display:block;height:100%;border-radius:0 4px 4px 0}
+  .fv{text-align:right;font-size:13px;white-space:nowrap}
+  .fv b{font-weight:750}
+  .fnote{grid-column:2 / 4;margin-top:-2px;font-size:11.5px;color:var(--muted)}
+  .refkey{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink2);margin:0 2px 10px}
+  .refkey span{display:inline-flex;align-items:center;gap:6px}
+  .refmini{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px}
+  .mchart{min-width:0}
+  .mhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 2px 2px}
+  .mhead span{font-size:13px;font-weight:700}
+  .mhead b{font-size:13px;font-weight:750}
+  .mhead small{font-size:11.5px;color:var(--muted);font-weight:600}
+  .mrow{display:grid;grid-template-columns:112px 1fr 190px;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line2)}
+  .mrow:first-child{border-top:none}
+  .mk{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:650;color:var(--ink2);white-space:nowrap}
+  .mk i{width:10px;height:10px;border-radius:3px;flex:none}
+  .mbars{display:flex;flex-direction:column;gap:4px}
+  .mbar{display:flex;height:14px;gap:2px}
+  .mbar i{display:block;height:100%}
+  .mbar i:last-child{border-radius:0 4px 4px 0}
+  .mcost{height:6px;border-radius:0 3px 3px 0;background:var(--muted);opacity:.55}
+  .mv{text-align:right;font-size:13px;white-space:nowrap}
+  .mv b{font-weight:750}
+  .mv small{display:block;font-size:11.5px;color:var(--muted);font-weight:600;white-space:normal}
+  .mempty{padding:14px;border-radius:10px;background:var(--card2);font-size:12.5px;color:var(--ink2);line-height:1.6}
+  details.refmore{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+  details.refmore>summary{cursor:pointer;padding:12px 16px;font-size:13.5px;font-weight:700;color:var(--ink2);list-style:none}
+  details.refmore>summary::-webkit-details-marker{display:none}
+  details.refmore>summary::before{content:'▸';display:inline-block;width:16px;color:var(--muted)}
+  details.refmore[open]>summary::before{content:'▾'}
+  details.refmore .refin{padding:0 16px 14px}
+  .refin h3{font-size:12.5px;font-weight:700;color:var(--muted);margin:14px 2px 6px}
+  .refin h3:first-child{margin-top:0}
+  ol.refhow{margin:6px 0 0;padding-left:20px;font-size:12px;color:var(--muted);line-height:1.7}
+  ol.refhow b{color:var(--ink2)}
   .exprog{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:12.5px;color:var(--ink2)}
   .exprog .bar{height:8px;border-radius:99px;background:var(--line2);overflow:hidden;margin-top:8px}
   .exprog .bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
@@ -151,7 +202,9 @@
     font:inherit;font-size:12px;font-weight:650;padding:6px 11px;border-radius:9px;cursor:pointer}
   .state{padding:48px 20px;text-align:center;color:var(--muted);font-size:14px}
   .hidden{display:none!important}
-  @media (max-width:720px){ .tiles,.refcard .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px} }
+  @media (max-width:720px){ .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px}
+    .reffun,.refmini{grid-template-columns:1fr} .frow{grid-template-columns:78px 1fr 64px;gap:8px}
+    .mrow{grid-template-columns:auto minmax(0,1fr);gap:6px 10px} .mrow .mbars{grid-column:1 / 3;grid-row:2} }
   @media (max-width:480px){ .tabs{gap:0;flex-wrap:wrap} .tab{flex:none;white-space:nowrap;font-size:14px;padding:12px 10px 10px} }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -185,28 +238,47 @@
   <main id="app" class="hidden">
     <div id="paneRef" class="hidden" role="tabpanel" aria-labelledby="tabRef">
       <section id="refSec" class="hidden">
-        <div class="sec-h"><h2>추천 링크 퍼널 (카페24 통계)</h2><div class="refctl"><span class="note" id="refNote"></span><button class="btn hidden" id="refLive" type="button">지금 조회</button></div></div>
+        <div class="verdict" id="refVerdict">
+          <div class="mark" id="refMark">…</div>
+          <div><b id="refVerdictTitle">숫자를 받는 중입니다</b><p id="refVerdictBody"></p></div>
+        </div>
+        <div class="sec-h" style="margin-top:22px"><h2>추천 링크로 들어온 친구</h2><div class="refctl"><span class="note" id="refNote"></span><button class="btn hidden" id="refLive" type="button">지금 조회</button></div></div>
         <div class="reflive hidden" id="refLiveMsg"></div>
         <div class="tiles" id="refTiles"></div>
-        <div class="refpaths hidden" id="refPaths"></div>
-        <div class="reftest hidden" id="refTest"></div>
-        <div class="reftest hidden" id="refPre"></div>
-        <div class="card refcard">
-          <div class="chart-title">추천 적립금 기록 (카페24 공식)</div>
+        <div class="refline hidden" id="refTest"></div>
+        <div class="refline hidden" id="refPre"></div>
+        <div class="card refbox">
+          <div class="chart-title">경로별 흐름</div>
+          <div class="chart-sub" id="refFunnelSub"></div>
+          <div class="reffun" id="refFunnel"></div>
+        </div>
+        <div class="card refbox">
+          <div class="chart-title">날짜별</div>
+          <div class="chart-sub" id="refDailySub"></div>
+          <div class="refkey" id="refDailyKey"></div>
+          <div class="refmini" id="refDaily"></div>
+        </div>
+        <div class="card refbox">
+          <div class="chart-title">확정 성과 — 3천원이 나간 친구</div>
           <div class="chart-sub" id="refOfficialSub"></div>
           <div class="tiles" id="refOfficial"></div>
-          <div class="refpaths hidden" id="refOfficialPaths"></div>
-          <div class="reftest hidden" id="refOfficialPre"></div>
-          <div class="reftest hidden" id="refAuto"></div>
+          <div class="refkey hidden" id="refMoneyKey"></div>
+          <div id="refMoney"></div>
+          <div class="refline hidden" id="refOfficialPre"></div>
+          <div class="refline hidden" id="refAuto"></div>
         </div>
-        <div class="sec-h" style="margin-top:22px"><h2>날짜별</h2></div>
-        <div class="card scroll">
-          <table>
-            <thead><tr><th>날짜</th><th>유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead>
-            <tbody id="refBody"></tbody>
-          </table>
-        </div>
-        <div class="footnote" id="refFoot" style="margin-top:8px"></div>
+        <details class="refmore">
+          <summary>숫자 표로 보기</summary>
+          <div class="refin">
+            <h3>경로별 흐름</h3>
+            <div class="refpaths" id="refPaths"></div>
+            <h3>확정 성과 경로별</h3>
+            <div class="refpaths" id="refOfficialPaths"></div>
+            <h3>날짜별</h3>
+            <div class="refpaths"><div class="scroll"><table><thead id="refHead"></thead><tbody id="refBody"></tbody></table></div></div>
+          </div>
+        </details>
+        <div class="footnote" id="refFoot" style="margin-top:12px"></div>
       </section>
     </div>
 
@@ -619,70 +691,168 @@ function renderTiles(){
            '<div class="d">'+(t.d||'')+' '+chip+'</div></div>';}).join('');
 }
 
+const WD=['일','월','화','수','목','금','토'];
+const mdw=x=>{const t=pd(x);return (t.getUTCMonth()+1)+'/'+t.getUTCDate()+'('+WD[t.getUTCDay()]+')';};
+function refMini(host,days,series,opt){
+  const W=Math.round(Math.min(640,Math.max(260,host.clientWidth||480))),H=180,padL=30,padR=6,padT=26,padB=24,iw=W-padL-padR,ih=H-padT-padB,n=Math.max(1,days.length);
+  const tot=days.map((_,i)=>opt.grouped?Math.max(0,...series.map(s=>s.vals[i]||0)):series.reduce((a,s)=>a+(s.vals[i]||0),0));
+  const max=Math.max(0,...tot);
+  let step=1;
+  if(max>4){const raw=max/4,p=Math.pow(10,Math.floor(Math.log10(raw)));step=[1,2,5,10].map(k=>k*p).find(v=>v>=raw);}
+  const top=Math.max(step,Math.ceil(max/step)*step);
+  const y=v=>padT+ih-(v/top)*ih, band=iw/n, cx=i=>padL+band*(i+0.5);
+  const col=(x,yt,w,h,r)=>{if(h<=0.5)return '';r=Math.min(r,w/2,h);const b=yt+h;
+    return 'M'+x.toFixed(1)+' '+b.toFixed(1)+'V'+(yt+r).toFixed(1)+'Q'+x.toFixed(1)+' '+yt.toFixed(1)+' '+(x+r).toFixed(1)+' '+yt.toFixed(1)+'H'+(x+w-r).toFixed(1)+'Q'+(x+w).toFixed(1)+' '+yt.toFixed(1)+' '+(x+w).toFixed(1)+' '+(yt+r).toFixed(1)+'V'+b.toFixed(1)+'Z';};
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+opt.label+'">';
+  for(let t=0;t<=top;t+=step){const gy=y(t).toFixed(1);
+    if(t) s+='<line class="grid" x1="'+padL+'" y1="'+gy+'" x2="'+(W-padR)+'" y2="'+gy+'"/>';
+    s+='<text class="axis-y" x="'+(padL-6)+'" y="'+(+gy+3.5).toFixed(1)+'" text-anchor="end">'+fmt(t)+'</text>';}
+  (opt.marks||[]).forEach(m=>{if(m.i<=0||m.i>=n)return;const mx=padL+band*m.i,right=mx>padL+iw*0.6;
+    s+='<line x1="'+mx.toFixed(1)+'" y1="'+(padT-10)+'" x2="'+mx.toFixed(1)+'" y2="'+(padT+ih)+'" stroke="var(--line)" stroke-width="1"/>';
+    s+='<text class="situ" x="'+(right?mx-4:mx+4).toFixed(1)+'" y="'+(padT-12)+'"'+(right?' text-anchor="end"':'')+'>'+m.text+'</text>';});
+  days.forEach((d,i)=>{
+    if(opt.grouped){const bw=Math.min(9,band*0.34),gap=2,x0=cx(i)-bw-gap/2;
+      series.forEach((sr,k)=>{const v=sr.vals[i]||0;if(!v)return;
+        s+='<path d="'+col(x0+k*(bw+gap),y(v),bw,padT+ih-y(v),3)+'" style="fill:var('+sr.col+')"'+(sr.op?' fill-opacity="'+sr.op+'"':'')+'/>';});}
+    else{const bw=Math.min(18,band*0.62),x0=cx(i)-bw/2,live=series.filter(sr=>sr.vals[i]>0);let acc=0;
+      live.forEach((sr,k)=>{const v=sr.vals[i],yt=y(acc+v),h=(y(acc)-y(acc+v))-(k?2:0);
+        s+='<path d="'+col(x0,yt,bw,h,k===live.length-1?3:0)+'" style="fill:var('+sr.col+')"'+(sr.op?' fill-opacity="'+sr.op+'"':'')+'/>';acc+=v;});}
+  });
+  s+='<line class="baseline" x1="'+padL+'" y1="'+(padT+ih)+'" x2="'+(W-padR)+'" y2="'+(padT+ih)+'"/>';
+  const k=Math.max(1,Math.ceil(n*34/iw));
+  days.forEach((d,i)=>{if((n-1-i)%k===0){const t=pd(d.x);
+    s+='<text class="axis" x="'+cx(i).toFixed(1)+'" y="'+(padT+ih+16)+'" text-anchor="middle">'+(t.getUTCMonth()+1)+'/'+t.getUTCDate()+'</text>';}});
+  days.forEach((d,i)=>{s+='<rect data-i="'+i+'" x="'+(padL+band*i).toFixed(1)+'" y="'+padT+'" width="'+band.toFixed(1)+'" height="'+ih+'" fill="transparent"/>';});
+  s+='</svg>';
+  host.innerHTML=s;
+  host.querySelectorAll('rect[data-i]').forEach(r=>{const i=+r.dataset.i;
+    const html=()=>'<div>'+mdw(days[i].x)+(days[i].pre?' · 발송 전 시험':'')+'</div><div class="t2">'+(series.filter(sr=>!days[i].pre===!sr.pre).map(sr=>sr.name+' '+fmt(sr.vals[i]||0)+opt.unit).join(' · ')||'기록 전')+'</div>';
+    r.addEventListener('mousemove',e=>showTip(e,html()));
+    r.addEventListener('mouseleave',hideTip);
+    r.addEventListener('touchstart',e=>showTip(e,html()),{passive:true});});
+}
+
 function renderReferral(){
   const R=D.referral; if(!R) return;
   const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
   const pct=(a,b)=>b?(a/b*100).toFixed(1)+'%':'—';
+  const md=x=>{if(!x)return '';const t=pd(x);return (t.getUTCMonth()+1)+'/'+t.getUTCDate();};
   const tile=(k,v,d,c)=>'<div class="tile"><div class="k">'+esc(k)+(c?' <span class="chip warn">'+esc(c)+'</span>':'')+'</div><div class="v">'+esc(v)+'</div><div class="d">'+esc(d)+'</div></div>';
-  const P=R.pre, PF=P&&P.funnel, early=R.to<R.from, span=P?(P.from===P.to?P.from:P.from+' ~ '+P.to):'';
+  const chipLine=(c,tone,text)=>'<span class="chip '+tone+'">'+esc(c)+'</span><span>'+text+'</span>';
+  const P=R.pre, PF=P&&P.funnel, early=R.to<R.from, span=P?(P.from===P.to?md(P.from):md(P.from)+'~'+md(P.to)):'';
   const preView=!!(early&&PF), tag=preView?'발송 전 시험':'';
-  const M4=['visits','joins','orders','revenue'], RO=R.orderSource?(R.order||{}):{};
-  const F=preView?PF:M4.reduce((s,m)=>(s[m]=((R.funnel||{})[m]||0)+(RO[m]||0),s),{});
-  $('#refSec').classList.remove('hidden');
-  $('#refSub').textContent=[R.from+(R.sentCount?' 발송':'부터'),R.link?'추천 링크 '+String(R.link).replace(/^https?:\/\//,''):''].filter(Boolean).join(' · ');
-  $('#refNote').textContent=(early?(preView?'지금은 발송 전 시험 숫자 · '+R.from+'부터 캠페인 숫자로 바뀜':R.from+'부터 셉니다 · 아직 시작 전'):R.from+' ~ '+R.to)+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
-  $('#refLive').classList.toggle('hidden',!R.liveUrl);
-  $('#refLive').onclick=()=>liveLookup(false);
-  $('#refTiles').innerHTML=[
-    tile('링크 유입',fmt(F.visits)+'회',preView?'일반·시험 링크 합계':R.orderSource?'문자·주문 완료 화면 합계':R.sentCount?'문자 발송 대상 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문',tag),
-    tile('가입',fmt(F.joins)+'명',(R.joinSource==='direct'?'가입 완료 화면 기준 · ':'')+'유입 대비 '+pct(F.joins,F.visits),tag),
-    tile('구매',fmt(F.orders)+'건','결제·입금 완료 기준 · 유입 대비 '+pct(F.orders,F.visits),tag),
-    tile('매출',fmt(F.revenue)+'원',F.orders?'취소·환불돼도 바로 안 빠짐 · 1건당 '+fmt(F.revenue/F.orders)+'원':'아직 구매 없음',tag)
-  ].join('');
-  const showPaths=!!(R.orderSource&&!preView), FN=R.funnel||{}, cnt=v=>fmt(v||0);
-  $('#refPaths').classList.toggle('hidden',!showPaths);
-  if(showPaths){
-    const unsorted=(RO.shares||0)-(RO.kakao||0)-(RO.sms||0)-(RO.copy||0);
-    const prow=(name,reach,sent,x)=>'<tr><td>'+esc(name)+'</td><td>'+reach+'</td><td>'+sent+'</td><td>'+cnt(x.visits)+'회</td><td>'+cnt(x.joins)+'명</td><td>'+cnt(x.orders)+'건</td><td>'+cnt(x.revenue)+'</td></tr>';
-    $('#refPaths').innerHTML='<div class="scroll"><table><thead><tr><th>경로</th><th>받은·본 회원</th><th>보내기 누른 회원</th><th>링크 유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead><tbody>'
-      +prow('문자',R.sentCount?cnt(R.sentCount)+'명':'—','—',FN)
-      +prow('주문 완료 화면',cnt(RO.views)+'명',cnt(RO.shares)+'명 <span class="situcell">카카오톡 '+cnt(RO.kakao)+' · 문자 '+cnt(RO.sms)+' · 링크 복사 '+cnt(RO.copy)+(unsorted>0?' · 구분 전 '+cnt(unsorted):'')+'</span>',RO)
-      +'</tbody></table></div><div class="refpnote">위 네 칸은 두 경로 합계입니다. 받은·본 회원은 문자 줄이면 문자를 받은 회원, 주문 완료 화면 줄이면 추천 창을 본 회원입니다. 보내기 누른 회원 옆 작은 글씨는 누른 단추별 수이고, 구분 전은 단추별로 세기 전(2026-11-11 낮)에 누른 수입니다.'
-      +(R.orderFrom?' 주문 완료 화면은 '+esc(R.orderFrom)+'부터 셉니다.':' 주문 완료 화면 추천 창은 아직 올리지 않았습니다(승인 대기). 올리면 이 줄이 셉니다.')+'</div>';
-  }
-  const T=R.test, hasTest=!!(R.testSource&&T&&(T.visits||T.joins||T.orders||T.revenue));
-  $('#refTest').classList.toggle('hidden',!hasTest);
-  if(hasTest) $('#refTest').textContent='시험 링크('+R.testSource+') 결과 — 유입 '+fmt(T.visits)+'회 · 가입 '+fmt(T.joins)+'명 · 구매 '+fmt(T.orders)+'건 · 매출 '+fmt(T.revenue)+'원 · 위 숫자에는 안 섞임';
-  const hasPre=!!(PF&&(early||PF.visits||PF.joins||PF.orders||PF.revenue));
-  $('#refPre').classList.toggle('hidden',!hasPre);
-  if(hasPre) $('#refPre').textContent=preView?'위 칸은 발송 전 시험('+span+') 숫자입니다(일반·시험 링크 합계). '+R.from+' 발송부터는 캠페인 숫자만 세고, 시험 숫자는 이 줄로 내려옵니다.':'발송 전 시험('+span+') — 유입 '+fmt(PF.visits)+'회 · 가입 '+fmt(PF.joins)+'명 · 구매 '+fmt(PF.orders)+'건 · 매출 '+fmt(PF.revenue)+'원 · 위 숫자에는 안 섞임';
+  const M4=['visits','joins','orders','revenue'], RO=R.orderSource?(R.order||{}):{}, FN=R.funnel||{};
+  const F=preView?PF:M4.reduce((s,m)=>(s[m]=(FN[m]||0)+(RO[m]||0),s),{});
   const O=R.official||{status:'needs_scope'}, OT=O.status==='ok'&&O.test;
   const preO=!!(early&&OT), OV=preO?OT:O, otag=preO?'발송 전 시험':'';
+  const LV=O.status==='ok'&&OV.laterRevenue!=null&&!O.laterError;
+  $('#refSec').classList.remove('hidden');
+  $('#refSub').textContent=[R.from?(R.sentCount?'문자 '+md(R.from)+' 발송':md(R.from)+'부터'):'',R.orderSource&&R.orderFrom?'주문 완료 화면 '+md(R.orderFrom)+'부터':''].filter(Boolean).join(' · ');
+  $('#refNote').textContent=(early?(preView?'발송 전 시험 숫자 · '+md(R.from)+'부터 캠페인 숫자':md(R.from)+'부터 셉니다'):md(R.from)+'~'+md(R.to))+(R.updatedAt?' · '+R.updatedAt+' 기준':'')+(R.refreshNote?' · '+R.refreshNote:'');
+  $('#refLive').classList.toggle('hidden',!R.liveUrl);
+  $('#refLive').onclick=()=>liveLookup(false);
+
+  const mark=(sym,tone,title,body)=>{const m=$('#refMark');m.textContent=sym;
+    m.style.background=tone==='good'?'var(--good)':'var(--muted)';
+    $('#refVerdictTitle').textContent=title;$('#refVerdictBody').textContent=body;};
+  const reach=R.sentCount&&R.orderSource?'문자는 '+fmt(R.sentCount)+'명이 받았고, 주문 완료 창은 '+fmt(RO.views||0)+'명이 봤습니다. ':R.sentCount?'문자는 '+fmt(R.sentCount)+'명이 받았습니다. ':R.orderSource?'주문 완료 창은 '+fmt(RO.views||0)+'명이 봤습니다. ':'';
+  const opened=reach+'추천 링크는 '+fmt(F.visits)+'번 열렸습니다.';
+  if(preView) mark('…','','발송 전 시험 중입니다',span+' 시험 링크로 유입 '+fmt(PF.visits)+'회, 가입 '+fmt(PF.joins)+'명, 구매 '+fmt(PF.orders)+'건이 잡혔습니다. '+md(R.from)+'부터 캠페인 숫자를 셉니다.');
+  else if(!preO&&O.status==='ok'&&(OV.orders||0)>0){const total=(OV.revenue||0)+(LV?OV.laterRevenue||0:0);
+    mark('✓','good','친구 '+fmt(OV.referees)+'명이 '+fmt(total)+'원어치 샀습니다',opened+' 3천원이 나간 친구 기준이고, 들어간 적립금은 '+fmt(OV.granted)+'원입니다.');}
+  else if(F.joins||F.orders) mark('…','','친구 가입 '+fmt(F.joins)+'명 · 구매 '+fmt(F.orders)+'건',opened+' 3천원은 친구 주문이 배송완료(출고 7일 뒤)되면 나가고, 그때 확정 성과가 오릅니다.');
+  else mark('…','','아직 친구 가입·구매는 없습니다',opened+' 친구가 링크로 가입해 사면 아래 숫자가 오릅니다.');
+
+  $('#refTiles').innerHTML=[
+    tile('링크 유입',fmt(F.visits)+'회',preView?'일반·시험 링크 합계':R.orderSource?'문자·주문 완료 화면 합계':R.sentCount?'문자 받은 회원 '+fmt(R.sentCount)+'명':'추천 링크로 들어온 방문',tag),
+    tile('가입',fmt(F.joins)+'명','유입 대비 '+pct(F.joins,F.visits),tag),
+    tile('구매',fmt(F.orders)+'건','유입 대비 '+pct(F.orders,F.visits),tag),
+    tile('매출',fmt(F.revenue)+'원',F.orders?'1건당 '+fmt(F.revenue/F.orders)+'원 · 취소 안 빠짐':'아직 구매 없음',tag)
+  ].join('');
+  const T=R.test, hasTest=!!(R.testSource&&T&&(T.visits||T.joins||T.orders||T.revenue));
+  $('#refTest').classList.toggle('hidden',!hasTest);
+  if(hasTest) $('#refTest').innerHTML=chipLine('시험 링크','flat','유입 '+fmt(T.visits)+'회 · 가입 '+fmt(T.joins)+'명 · 구매 '+fmt(T.orders)+'건 · 매출 '+fmt(T.revenue)+'원 — 위 숫자와 차트에 안 섞임');
+  const hasPre=!!(PF&&(early||PF.visits||PF.joins||PF.orders||PF.revenue));
+  $('#refPre').classList.toggle('hidden',!hasPre);
+  if(hasPre) $('#refPre').innerHTML=chipLine('발송 전 시험','flat',preView?'위 칸은 '+esc(span)+' 시험 숫자(일반·시험 링크 합계)입니다. '+esc(md(R.from))+'부터 캠페인 숫자로 바뀝니다.':esc(span)+' 유입 '+fmt(PF.visits)+'회 · 가입 '+fmt(PF.joins)+'명 · 구매 '+fmt(PF.orders)+'건 · 매출 '+fmt(PF.revenue)+'원 — 날짜별 회색 막대, 위 숫자에 안 섞임');
+
+  const fbar=(v,top,c)=>'<span class="ftrack"><i style="width:'+(top&&v?'max(3px,'+Math.min(100,v/top*100).toFixed(2)+'%)':'0')+';background:var('+c+')"></i></span>';
+  const fpanel=(name,c,right,rows,foot)=>{const top=Math.max(0,...rows.map(r=>r.v||0));
+    return '<div class="fpanel"><div class="fhead"><i style="background:var('+c+')"></i>'+esc(name)+(right?'<small>'+esc(right)+'</small>':'')+'</div>'
+      +rows.map(r=>'<div class="frow"><span class="fk">'+esc(r.k)+'</span>'+fbar(r.v||0,top,c)+'<span class="fv"><b>'+fmt(r.v||0)+r.u+'</b></span>'+(r.note?'<span class="fnote">'+r.note+'</span>':'')+'</div>').join('')
+      +(foot?'<div class="fnote" style="margin-top:4px">'+foot+'</div>':'')+'</div>';};
+  const unsorted=(RO.shares||0)-(RO.kakao||0)-(RO.sms||0)-(RO.copy||0);
+  let panels;
+  if(preView) panels=[fpanel('발송 전 시험','--accent',span,[{k:'링크 유입',v:PF.visits,u:'회'},{k:'가입',v:PF.joins,u:'명'},{k:'구매',v:PF.orders,u:'건'}],'매출 '+fmt(PF.revenue)+'원')];
+  else{
+    panels=[fpanel('문자','--ref-sms',R.sentCount?md(R.from)+' 발송':'',(R.sentCount?[{k:'받은 회원',v:R.sentCount,u:'명'}]:[]).concat([{k:'링크 유입',v:FN.visits,u:'회'},{k:'가입',v:FN.joins,u:'명'},{k:'구매',v:FN.orders,u:'건'}]),'매출 '+fmt(FN.revenue||0)+'원')];
+    if(R.orderSource) panels.push(fpanel('주문 완료 화면','--ref-ord',R.orderFrom?md(R.orderFrom)+'부터':'',[{k:'창 본 회원',v:RO.views,u:'명'},
+      {k:'보내기 누른 회원',v:RO.shares,u:'명',note:'카카오톡 '+fmt(RO.kakao||0)+' · 문자 '+fmt(RO.sms||0)+' · 링크 복사 '+fmt(RO.copy||0)+(unsorted>0?' · 구분 전 '+fmt(unsorted):'')},
+      {k:'링크 유입',v:RO.visits,u:'회'},{k:'가입',v:RO.joins,u:'명'},{k:'구매',v:RO.orders,u:'건'}],'매출 '+fmt(RO.revenue||0)+'원'));
+  }
+  $('#refFunnel').classList.toggle('one',panels.length<2);
+  $('#refFunnel').innerHTML=panels.join('');
+  $('#refFunnelSub').textContent='카페24 통계로 바로 셉니다. 구매는 결제(무통장은 입금 확인) 때 오르고, 취소돼도 바로 빠지지 않습니다.';
+
+  const PD=P&&P.daily||null, CD=R.daily||{dates:[]}, od=!preView&&R.orderSource&&R.orderDaily||null;
+  const days=[];
+  if(PD) PD.dates.forEach((x,i)=>{if(!R.from||x<R.from||preView)days.push({x,pre:true,i});});
+  if(!preView) CD.dates.forEach((x,i)=>days.push({x,pre:false,i}));
+  const pick=(g,m,i)=>g&&Array.isArray(g[m])?+g[m][i]||0:0;
+  const vals=(m,which)=>days.map(d=>d.pre?(which==='pre'?pick(PD,m,d.i):0):(which==='sms'?pick(CD,m,d.i):which==='ord'?pick(od,m,d.i):0));
+  const firstCamp=days.findIndex(d=>!d.pre), firstOrd=R.orderFrom?days.findIndex(d=>!d.pre&&d.x>=R.orderFrom):-1;
+  const startMark=firstCamp>0?[{i:firstCamp,text:R.sentCount?'문자 발송':'시작'}]:[];
+  const stack=m=>[{name:'발송 전 시험',col:'--ref-pre',vals:vals(m,'pre'),pre:true},{name:'문자',col:'--ref-sms',vals:vals(m,'sms')}].concat(od?[{name:'주문 완료 화면',col:'--ref-ord',vals:vals(m,'ord')}]:[]);
+  const sum=a=>a.reduce((t,v)=>t+(+v||0),0);
+  const charts=[{m:'visits',k:'링크 유입',u:'회'},{m:'joins',k:'가입',u:'명'},{m:'orders',k:'구매',u:'건'}];
+  const host=$('#refDaily');
+  host.innerHTML=charts.map((c,j)=>'<div class="mchart"><div class="mhead"><span>'+c.k+'</span><span><b>'+fmt(preView?sum(vals(c.m,'pre')):F[c.m])+c.u+'</b> <small>'+(preView?'시험 합계':'발송 뒤 합계')+'</small></span></div><div id="refMini'+j+'"></div></div>').join('')
+    +(od?'<div class="mchart"><div class="mhead"><span>주문 완료 창</span><span><small>본 회원</small> <b>'+fmt(RO.views||0)+'명</b> <small>· 보낸 회원</small> <b>'+fmt(RO.shares||0)+'명</b></span></div><div id="refMini3"></div></div>':'');
+  charts.forEach((c,j)=>refMini($('#refMini'+j),days,stack(c.m),{unit:c.u,label:c.k+' 날짜별',marks:startMark}));
+  if(od) refMini($('#refMini3'),days,[{name:'창 본 회원',col:'--ref-ord',op:0.42,vals:vals('views','ord')},{name:'보낸 회원',col:'--ref-ord',vals:vals('shares','ord')}],{grouped:true,unit:'명',label:'주문 완료 창 날짜별',marks:firstOrd>0?[{i:firstOrd,text:'창 시작'}]:[]});
+  const key=(c,op,t)=>'<span><i style="background:var('+c+')'+(op?';opacity:'+op:'')+'"></i>'+t+'</span>';
+  $('#refDailyKey').innerHTML=(PD&&days.some(d=>d.pre)?key('--ref-pre','','발송 전 시험'):'')+(preView?'':key('--ref-sms','','문자'))+(od?key('--ref-ord','','주문 완료 화면')+key('--ref-ord',0.42,'창 본 회원(옅은 막대)'):'');
+  $('#refDailySub').textContent='막대에 마우스를 올리거나 누르면 그날 숫자가 나옵니다. 오늘 숫자는 하루가 끝날 때까지 오릅니다.';
+
+  const lanes=[['문자','real','--ref-sms'],['주문 완료 화면','order','--ref-ord'],['경로 모름','unknown','--ref-pre']];
+  const PL=O.paths&&O.paths.test;
+  if(PL&&(PL.rewards||PL.revoked)) lanes.push(['시험 링크','test','--ref-pre']);
   const hasOT=!!(OT&&(early||OT.rewards||OT.revoked));
   $('#refOfficialPre').classList.toggle('hidden',!hasOT);
-  if(hasOT) $('#refOfficialPre').textContent=preO?'위 네 칸은 발송 전 시험 주문(친구 주문일이 '+R.from+' 전) 기록입니다. '+R.from+' 발송부터는 그날 이후 주문만 세고, 시험 주문은 이 줄로 내려옵니다.':'발송 전 시험 주문 — '+(OT.rewards?'추천 구매 '+fmt(OT.orders)+'건 · 그 주문 매출 '+fmt(OT.revenue)+'원 · 추천인 적립금 '+fmt(OT.granted)+'원'+(OT.pending?' (지급 대기 '+fmt(OT.pending)+'원)':''):'아직 지급 기록 없음 · 시험 주문에 추천인 적립금을 '+(R.liveUrl?'지급한 뒤 이 화면으로 돌아오면 바로 여기 오릅니다':'지급하면 다음 갱신부터 여기 오릅니다'))+' · 위 숫자에는 안 섞임';
+  if(hasOT) $('#refOfficialPre').innerHTML=chipLine('발송 전 시험','flat',preO?'위 칸은 발송 전 시험 주문(친구 주문일이 '+esc(md(R.from))+' 전) 기록입니다. '+esc(md(R.from))+'부터는 그날 이후 주문만 셉니다.':(OT.rewards?'추천 구매 '+fmt(OT.orders)+'건 · 그 주문 매출 '+fmt(OT.revenue)+'원 · 추천인 적립금 '+fmt(OT.granted)+'원'+(OT.pending?'(지급 대기 '+fmt(OT.pending)+'원)':''):'아직 지급 기록 없음')+' — 위 숫자에 안 섞임');
+  const PT=O.status==='ok'&&!preO&&R.orderSource&&O.paths;
   if(O.status==='ok'){
-    $('#refOfficialSub').textContent='친구 주문이 배송완료된 뒤 관리자가 추천인에게 3천원을 지급하면 카페24가 남기는 감사 적립금 기록입니다. 그래서 위 구매보다 며칠 늦게 오르고, 지급하지 않으면 계속 0입니다. 링크를 거치지 않고 추천인 아이디를 직접 넣은 가입도 포함됩니다.'+(R.liveUrl?' 지급한 뒤 이 화면으로 돌아오면 바로 반영됩니다.':'')+(early&&!preO?' 아래 네 칸은 캠페인 시작일('+R.from+')부터 셉니다. 시작 전 시험 주문은 그 아래 점선 줄에 따로 나옵니다.':'');
-    const LV=OV.laterRevenue!=null&&!O.laterError;
+    $('#refOfficialSub').textContent='친구 주문이 배송완료돼 추천인에게 3천원이 나간 기록(카페24 적립금)으로 셉니다. 취소된 주문은 빼고, 그래서 위 구매보다 며칠 늦게 오릅니다.';
+    const total=(OV.revenue||0)+(LV?OV.laterRevenue||0:0), ratio=total&&OV.granted?total/OV.granted:0;
     $('#refOfficial').innerHTML=[
-      tile('추천 구매',fmt(OV.orders)+'건','취소된 주문 제외',otag),
-      tile('구매한 친구',fmt(OV.referees)+'명','서로 다른 회원 수',otag),
-      tile('그 주문 매출',fmt(OV.revenue)+'원','적립금 사용분 포함 결제액',otag),
-      tile('그 뒤 주문 매출',LV?fmt(OV.laterRevenue)+'원':'—',LV?'다시 산 친구 '+fmt(OV.laterReferees)+'명 · '+fmt(OV.laterOrders)+'건':O.laterError?'이번 조회에서 못 읽음':'화면을 열면 자동 조회로 받음',otag),
-      tile('친구 매출 합계',LV?fmt(OV.revenue+OV.laterRevenue)+'원':'—','그 주문 + 그 뒤 주문',otag),
-      tile('추천인 적립금',fmt(OV.granted)+'원','지급 대기 '+fmt(OV.pending)+'원',otag)
+      tile('구매한 친구',fmt(OV.referees)+'명','추천 구매 '+fmt(OV.orders)+'건 · 취소 뺌',otag),
+      tile('친구 매출',fmt(total)+'원',LV?'첫 주문 '+fmt(OV.revenue)+' + 그 뒤 주문 '+fmt(OV.laterRevenue):O.laterError?'첫 주문만 · 그 뒤 주문은 이번에 못 읽음':'첫 주문만 · 그 뒤 주문은 자동 조회로 받음',otag),
+      tile('추천인 적립금',fmt(OV.granted)+'원','지급 대기 '+fmt(OV.pending)+'원',otag),
+      tile('적립금 대비 매출',ratio?ratio.toFixed(1)+'배':'—',ratio?'친구 매출 ÷ 추천인 적립금':'친구 매출이 생기면 계산',otag)
     ].join('');
-    const PT=!preO&&R.orderSource&&O.paths, PL=O.paths&&O.paths.test;
-    const lanes=[['문자','real'],['주문 완료 화면','order'],['경로 모름','unknown']].concat(PL&&(PL.rewards||PL.revoked)?[['시험 링크','test']]:[]);
+    const rows=PT?lanes.map(l=>({name:l[0],c:l[2],x:O.paths[l[1]]||{}})).filter(r=>r.name!=='경로 모름'||r.x.rewards||r.x.revenue||r.x.granted):[];
+    const big=r=>Math.max((r.x.revenue||0)+(LV?r.x.laterRevenue||0:0),r.x.granted||0);
+    const top=Math.max(0,...rows.map(big));
+    const w=v=>top&&v?'max(3px,'+(v/top*100).toFixed(2)+'%)':'0px';
+    $('#refMoneyKey').classList.toggle('hidden',!(PT&&top));
+    $('#refMoneyKey').innerHTML=key('--ink2','','첫 주문')+key('--ink2',0.42,'그 뒤 주문')+'<span><i style="background:var(--muted);opacity:.55;height:5px"></i>추천인 적립금</span>';
+    $('#refMoney').innerHTML=!PT
+      ?'<div class="mempty">'+(O.pathsError?'경로별 숫자를 못 받았습니다 — '+esc(O.pathsError):'경로별 막대는 이 화면이 카페24에서 자동 조회를 받으면 나옵니다.')+'</div>'
+      :!top?'<div class="mempty">아직 3천원이 나간 친구 주문이 없습니다. 친구가 링크로 가입해 처음 산 주문이 배송완료(출고 7일 뒤)되면 3천원이 나가고, 그때 여기에 경로별 막대가 생깁니다.</div>'
+      :'<div>'+rows.map(r=>{const a=r.x.revenue||0,b=LV?r.x.laterRevenue||0:0,g=r.x.granted||0,end=b?2:1;
+        return '<div class="mrow"><span class="mk"><i style="background:var('+r.c+')"></i>'+esc(r.name)+'</span>'
+          +'<span class="mbars"><span class="mbar"><i style="width:'+w(a)+';background:var('+r.c+')'+(end===1?';border-radius:0 4px 4px 0':'')+'"></i>'+(b?'<i style="width:'+w(b)+';background:var('+r.c+');opacity:.42"></i>':'')+'</span><span class="mcost" style="width:'+w(g)+'"></span></span>'
+          +'<span class="mv"><b>'+fmt(a+b)+'원</b><small>친구 '+fmt(r.x.referees||0)+'명 · 적립금 '+fmt(g)+'원'+(r.x.pending?' · 대기 '+fmt(r.x.pending):'')+'</small></span></div>';}).join('')+'</div>';
     const lcell=x=>LV?fmt(x.laterRevenue||0)+(x.laterOrders?' <span class="situcell">'+fmt(x.laterReferees||0)+'명 · '+fmt(x.laterOrders)+'건</span>':''):'—';
     const orow=(name,x)=>'<tr><td>'+esc(name)+'</td><td>'+fmt(x.orders||0)+'건</td><td>'+fmt(x.referees||0)+'명</td><td>'+fmt(x.revenue||0)+'</td><td>'+lcell(x)+'</td><td>'+fmt(x.granted||0)+(x.pending?' <span class="situcell">대기 '+fmt(x.pending)+'</span>':'')+'</td></tr>';
-    $('#refOfficialPaths').classList.toggle('hidden',!(R.orderSource&&!preO));
     $('#refOfficialPaths').innerHTML=PT
-      ?'<div class="scroll"><table><thead><tr><th>경로</th><th>추천 구매</th><th>구매한 친구</th><th>그 주문 매출(원)</th><th>그 뒤 주문 매출(원)</th><th>추천인 적립금(원)</th></tr></thead><tbody>'+lanes.map(l=>orow(l[0],O.paths[l[1]]||{})).join('')+'</tbody></table></div><div class="refpnote">위 칸은 경로 합계입니다. 그 뒤 주문 매출은 3천원이 나간 친구가 그 주문 다음에 산 주문(결제 끝나고 취소 안 된 것)을 오늘까지 모두 더한 값이고, 30분마다 다시 셉니다.'+(O.laterError?' 이번에는 못 읽었습니다 — '+esc(O.laterError):'')+' 경로는 친구가 추천 링크를 누른 브라우저에서 회원으로 로그인했을 때(가입 직후 포함) 남긴 기록으로 나눕니다. 링크 없이 추천인 아이디를 직접 넣었거나, 링크를 누른 기기와 다른 기기에서만 로그인한 친구는 경로 모름으로 갑니다.</div>'
-      :'<div class="refpnote">'+(O.pathsError?'경로별 숫자를 못 받았습니다 — '+esc(O.pathsError):'경로별 숫자(문자 / 주문 완료 화면 / 경로 모름)는 이 화면이 카페24에서 자동 조회를 받으면 나옵니다.')+'</div>';
+      ?'<div class="scroll"><table><thead><tr><th>경로</th><th>추천 구매</th><th>구매한 친구</th><th>그 주문 매출(원)</th><th>그 뒤 주문 매출(원)</th><th>추천인 적립금(원)</th></tr></thead><tbody>'+lanes.map(l=>orow(l[0],O.paths[l[1]]||{})).join('')+'</tbody></table></div><div class="refpnote">그 뒤 주문 매출은 3천원이 나간 친구가 그 주문 다음에 산 주문(결제 끝나고 취소 안 된 것)을 오늘까지 더한 값이고, 30분마다 다시 셉니다.'+(O.laterError?' 이번에는 못 읽었습니다 — '+esc(O.laterError):'')+'</div>'
+      :'<div class="refpnote">'+(O.pathsError?'경로별 숫자를 못 받았습니다 — '+esc(O.pathsError):'경로별 숫자는 이 화면이 카페24에서 자동 조회를 받으면 나옵니다.')+'</div>';
   } else {
-    $('#refOfficialPaths').classList.add('hidden');
     $('#refOfficial').innerHTML='';
+    $('#refMoneyKey').classList.add('hidden');
+    $('#refMoney').innerHTML='';
+    $('#refOfficialPaths').innerHTML='<div class="refpnote">확정 성과를 아직 못 받았습니다.</div>';
     $('#refOfficialSub').textContent=O.status==='needs_scope'
       ?'취소를 뺀 추천 구매·매출은 이 칸에 나옵니다. 지금은 카페24 연결에 적립금 읽기 권한이 없어 아직 못 가져옵니다. 권한을 추가하면 다음 갱신부터 이 칸이 자동으로 채워집니다.'
       :'이번 갱신에서 적립금 기록을 못 읽었습니다 — '+(O.message||'');
@@ -691,16 +861,30 @@ function renderReferral(){
   $('#refAuto').classList.toggle('hidden',!showAP);
   if(showAP){
     const heldAP=Object.entries(AP.holds||{}).map(h=>h[0]+' '+fmt(h[1])+'건').join(', ');
-    $('#refAuto').textContent='3천원 자동 지급 — '+(AP.mode==='on'&&AP.writable?'켜짐':AP.mode==='on'?'켜졌지만 카페24 적립금 쓰기 권한이 없어 지급 안 함':'아직 꺼짐(계산만 하고 지급 안 함)')
-      +' · 추천한 분이 기록된 가입 친구 '+fmt((RFR.real||0)+(RFR.order||0)+(RFR.form||0))+'명'+(RFR.form?'(가입 화면 추천인 칸에 직접 적은 '+fmt(RFR.form)+'명 포함)':'')+' · 지급 '+fmt(AP.paid||0)+'건('+fmt(AP.granted||0)+'원) · 지급할 차례 '+fmt(AP.due||0)+'건'
+    const on=AP.mode==='on'&&AP.writable;
+    $('#refAuto').innerHTML=chipLine(on?'3천원 자동 지급 켜짐':'3천원 자동 지급 꺼짐',on?'up':'warn',esc((AP.mode==='on'&&!AP.writable?'카페24 적립금 쓰기 권한이 없어 지급 안 함 · ':AP.mode!=='on'?'계산만 하고 지급 안 함 · ':'')
+      +'지급 '+fmt(AP.paid||0)+'건('+fmt(AP.granted||0)+'원) · 지급할 차례 '+fmt(AP.due||0)+'건'
       +' · 배송완료 '+(AP.waitDays?AP.waitDays+'일 ':'')+'기다림 '+fmt((AP.waiting||0)+(AP.shipping||0)+(AP.unpaid||0))+'건 · 보류 '+fmt(AP.held||0)+'건'+(heldAP?'('+heldAP+')':'')
       +(AP.cafe24?' · 지급관리에서 준 것 '+fmt(AP.cafe24)+'건':'')+(AP.recall?' · 회수 확인 '+fmt(AP.recall)+'건':'')+(AP.error?' · 지급 실패 '+fmt(AP.error)+'건':'')
-      +(AP.status==='error'?' · 마지막 계산 실패: '+(AP.message||''):'')+' · 마지막 계산 '+String(AP.at||'').slice(5);
+      +' · 추천한 분이 기록된 가입 친구 '+fmt((RFR.real||0)+(RFR.order||0)+(RFR.form||0))+'명'+(RFR.form?'(가입 화면 추천인 칸에 직접 적은 '+fmt(RFR.form)+'명 포함)':'')
+      +(AP.status==='error'?' · 마지막 계산 실패: '+(AP.message||''):'')+' · 마지막 계산 '+String(AP.at||'').slice(5)));
   }
-  const d=preView&&P.daily?P.daily:(R.daily||{dates:[]}), od=!preView&&R.orderSource&&R.orderDaily||null;
-  const dv=(m,i)=>(+d[m][i]||0)+(od&&Array.isArray(od[m])?+od[m][i]||0:0);
-  $('#refBody').innerHTML=d.dates.map((x,i)=>'<tr><td>'+esc(x)+'</td><td>'+fmt(dv('visits',i))+'</td><td>'+fmt(dv('joins',i))+'</td><td>'+fmt(dv('orders',i))+'</td><td>'+fmt(dv('revenue',i))+'</td></tr>').reverse().join('');
-  $('#refFoot').innerHTML='<b>세는 법</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+(R.orderSource?', '+esc(R.orderSource):'')+')로 들어온 방문과 그 방문 안에서 일어난 가입·구매를 카페24 애널리틱스에서 자동으로 받습니다. 추천인 본인이 링크를 눌러 본 방문·구매도 섞일 수 있어, 추천으로 생긴 구매는 위 적립금 기록을 기준으로 봅니다.'+(R.orderSource?' 경로는 링크 끝 꼬리표로 나눕니다(문자 '+esc(String(R.link||'').replace(/^https?:\/\//,''))+', 주문 완료 화면 '+esc(String(R.orderLink||'').replace(/^https?:\/\//,''))+'). 위 네 칸과 날짜별 표는 두 경로 합계입니다.':'')+(R.liveUrl?' 이 화면을 열면 유입·가입·구매 숫자와 추천 적립금 기록을 카페24에서 그 자리에서 받아 옵니다. 열어 둔 동안에는 10분마다, 다른 탭에 갔다 돌아오면 바로 다시 받고, 제목 옆 <b>지금 조회</b>로 언제든 다시 받을 수 있습니다.':'')+(R.joinSource==='direct'?' 가입은 추천 링크로 들어온 브라우저가 가입 완료 화면에 도착한 수를 우리가 직접 셉니다(11/3 저녁부터, 카페24 통계는 가입을 늦고 일부만 세서 쓰지 않음).':' 가입·구매·매출은 카페24 통계가 정리한 뒤에 올라 유입보다 늦고, 가입은 실제보다 적게 나오기도 합니다(11/2 실측: 실제 가입 11명 중 통계 8명).')+' 구매·매출은 카페24 통계 기준이라 결제가 끝난 때(무통장은 입금 확인 때) 잡히고, 주문이 취소·환불돼도 바로 빠지지 않습니다. 취소를 뺀 숫자는 위 적립금 기록 칸에서 봅니다.'+' 추천으로 가입했는지는 카페24 관리자 &gt; 프로모션 &gt; 리워드 프로그램 관리 &gt; 추천인 관리에서 바로 확인됩니다.'+(P?(preView?' 발송 전인 지금은 칸과 날짜별 표에 <b>발송 전 시험</b>('+esc(span)+') 숫자를 보여 줍니다. 시작일('+esc(R.from)+')부터는 칸이 캠페인 숫자만 세고, 시험 숫자는 칸 아래 점선 줄로 내려갑니다.':' 시작일 전('+esc(P.from)+'부터)에 생긴 유입·가입·구매와 그 주문의 적립금 기록은 <b>발송 전 시험</b> 줄에만 따로 보여 주고 위 숫자에는 넣지 않습니다.'):'')+(R.error?'<br><b>알림</b> — '+esc(R.error):'')+(R.directError?'<br><b>알림</b> — 가입 직접 집계를 못 받아 카페24 통계 가입을 보여 줍니다: '+esc(R.directError):'');
+
+  const showPaths=!!(R.orderSource&&!preView), cnt=v=>fmt(v||0);
+  $('#refPaths').innerHTML=showPaths
+    ?'<div class="scroll"><table><thead><tr><th>경로</th><th>받은·본 회원</th><th>보내기 누른 회원</th><th>링크 유입</th><th>가입</th><th>구매</th><th>매출(원)</th></tr></thead><tbody>'
+      +['문자','주문 완료 화면'].map((name,j)=>{const x=j?RO:FN;return '<tr><td>'+name+'</td><td>'+(j?cnt(RO.views)+'명':R.sentCount?cnt(R.sentCount)+'명':'—')+'</td><td>'+(j?cnt(RO.shares)+'명 <span class="situcell">카카오톡 '+cnt(RO.kakao)+' · 문자 '+cnt(RO.sms)+' · 링크 복사 '+cnt(RO.copy)+(unsorted>0?' · 구분 전 '+cnt(unsorted):'')+'</span>':'—')+'</td><td>'+cnt(x.visits)+'회</td><td>'+cnt(x.joins)+'명</td><td>'+cnt(x.orders)+'건</td><td>'+cnt(x.revenue)+'</td></tr>';}).join('')
+      +'</tbody></table></div><div class="refpnote">받은·본 회원은 문자 줄이면 문자를 받은 회원, 주문 완료 화면 줄이면 추천 창을 본 회원입니다. 구분 전은 단추별로 세기 전(11/11 낮)에 누른 수입니다.'+(R.orderFrom?' 주문 완료 화면은 '+esc(R.orderFrom)+'부터 셉니다.':'')+'</div>'
+    :'<div class="refpnote">'+(preView?'발송 전 시험 숫자는 경로를 나누지 않고 합쳐서 셉니다.':'경로가 하나라 위 칸과 같습니다.')+'</div>';
+  $('#refHead').innerHTML='<tr><th>날짜</th><th>유입</th><th>가입</th><th>구매</th><th>매출(원)</th>'+(od?'<th>창 본 회원</th><th>보내기</th>':'')+'</tr>';
+  const dv=(m,i)=>{const d=days[i];return d.pre?pick(PD,m,d.i):pick(CD,m,d.i)+pick(od,m,d.i);};
+  $('#refBody').innerHTML=days.map((d,i)=>'<tr><td>'+esc(d.x)+(d.pre?' <span class="situcell">시험</span>':'')+'</td><td>'+fmt(dv('visits',i))+'</td><td>'+fmt(dv('joins',i))+'</td><td>'+fmt(dv('orders',i))+'</td><td>'+fmt(dv('revenue',i))+'</td>'+(od?'<td>'+(d.pre?'—':fmt(pick(od,'views',d.i)))+'</td><td>'+(d.pre?'—':fmt(pick(od,'shares',d.i)))+'</td>':'')+'</tr>').reverse().join('');
+
+  const how=['<b>흐름</b> — 추천 링크(꼬리표 '+esc(R.utmSource)+(R.orderSource?'·'+esc(R.orderSource):'')+')로 들어온 방문과 그 방문 안의 가입·구매를 카페24 통계에서 받습니다. 추천인 본인이 눌러 본 방문도 섞일 수 있어, 추천으로 생긴 구매는 확정 성과로 봅니다.'+(R.joinSource==='direct'?' 가입은 링크로 들어온 브라우저가 가입 완료 화면에 도착한 수를 직접 셉니다.':''),
+    R.orderSource?'<b>경로</b> — 문자 링크는 '+esc(String(R.link||'').replace(/^https?:\/\//,''))+', 주문 완료 화면 링크는 '+esc(String(R.orderLink||'').replace(/^https?:\/\//,''))+'입니다. 보내기 누른 회원은 창의 카카오톡·문자·링크 복사 중 하나라도 누른 회원이고, 같은 휴대폰·컴퓨터는 하루 한 번만 셉니다.':'',
+    '<b>확정 성과</b> — 친구 주문이 배송완료(출고 7일 뒤)돼 추천인에게 3천원이 나가면 오르고, 취소는 뺍니다. 가입 화면 추천인 칸에 아이디를 직접 적은 친구도 들어가며, 링크를 누른 기기와 다른 기기에서만 로그인한 친구는 경로 모름으로 갑니다. 카페24 관리자 &gt; 프로모션 &gt; 리워드 프로그램 관리 &gt; 추천인 관리에서도 보입니다.',
+    (R.liveUrl?'<b>갱신</b> — 이 화면을 열면 카페24에서 바로 받고, 열어 둔 동안 10분마다·다른 탭에서 돌아오면 다시 받습니다.':'<b>갱신</b> — 하루 한 번 갱신됩니다.')+(P?(preView?' 시작일('+esc(R.from)+') 전에는 위 칸과 차트에 발송 전 시험 숫자를 보여 줍니다.':' 발송 전 시험('+esc(P.from)+'부터) 숫자는 시험 줄과 날짜별 회색 막대에만 보이고 위 숫자에는 넣지 않습니다.'):'')].filter(Boolean);
+  $('#refFoot').innerHTML='<b>세는 법</b><ol class="refhow">'+how.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+(R.error?'<div><b>알림</b> — '+esc(R.error)+'</div>':'')+(R.directError?'<div><b>알림</b> — 가입 직접 집계를 못 받아 카페24 통계 가입을 보여 줍니다: '+esc(R.directError)+'</div>':'');
 }
 
 function liveToken(){
@@ -767,12 +951,12 @@ function liveLookup(auto){
       const placed=applyLive(L,auto), when=String(L.checkedAt).slice(11);
       renderReferral();
       liveAt=Date.now();
-      const oNote=gotO?' 추천 적립금 기록도 지금 카페24에서 다시 받았습니다.':O?' 추천 적립금 기록은 이번에 못 받아 이전 갱신 숫자 그대로입니다'+(O.message?' — '+O.message:'.'):' 적립금 기록은 바로 조회가 안 되고 다음 갱신 때 오릅니다.';
+      const oNote=gotO?' 확정 성과도 다시 받았습니다.':O?' 확정 성과는 이번에 못 받아 이전 숫자 그대로입니다'+(O.message?' — '+O.message:'.'):' 확정 성과는 다음 갱신 때 오릅니다.';
       const dNote=L.daysError?' 지난 날짜 숫자는 이번에 못 받아 마지막 갱신 숫자 그대로입니다.':'';
       msg.className='reflive';
-      if(auto){msg.textContent=when+'에 이 화면을 열어 카페24에서 자동으로 받은 숫자입니다. 열어 둔 동안 10분마다 다시 받습니다.'+dNote+(gotO?'':oNote);return;}
-      if(R.from&&L.date<R.from){msg.textContent=(placed?when+'에 바로 받은 오늘 숫자입니다. 캠페인 시작일('+R.from+') 전이라 칸에 발송 전 시험 숫자로 넣었습니다.':'캠페인 시작일('+R.from+') 전이라 바꿀 숫자가 없습니다.')+dNote+oNote;return;}
-      msg.textContent=when+'에 바로 받은 오늘 숫자입니다. '+(R.joinSource==='direct'?'가입은 가입 완료 화면에 도착하는 즉시 오르고, 구매·매출은 카페24 통계라 결제(무통장은 입금 확인) 뒤에 오르며 취소돼도 바로 빠지지 않습니다.':'유입은 몇 분 안에 오르지만 가입·구매는 카페24 통계가 더 늦게 정리합니다. 추천 가입 여부는 카페24 관리자 추천인 관리에서 바로 보입니다.')+dNote+oNote;})
+      if(auto){const extra=(dNote+(gotO?'':oNote)).trim();msg.textContent=extra;msg.classList.toggle('hidden',!extra);return;}
+      if(R.from&&L.date<R.from){msg.textContent=(placed?when+' 바로 조회 · 캠페인 시작일('+R.from+') 전이라 발송 전 시험 숫자로 넣었습니다.':'캠페인 시작일('+R.from+') 전이라 바꿀 숫자가 없습니다.')+dNote+oNote;return;}
+      msg.textContent=when+' 바로 조회했습니다.'+dNote+oNote;})
     .catch(e=>{msg.className='reflive bad';
       msg.textContent=(auto?'자동 조회를 못 했습니다 — ':'')+(e&&e.message&&!/fetch|network|load failed/i.test(e.message)?e.message:'바로 조회 서버에 연결하지 못했습니다. 잠시 뒤 다시 눌러 주세요.');})
     .finally(()=>{liveBusy=false;b.disabled=false;b.textContent='지금 조회';});
@@ -1461,6 +1645,8 @@ function renderTable(){
 function render(){renderMain();renderTable();}
 function renderAll(){renderMain();renderStack();renderLine();renderTable();}
 addEventListener('scroll',hideTip,{passive:true});
+let refW=0;
+if(window.ResizeObserver) new ResizeObserver(()=>{const w=$('#refDaily').clientWidth;if(!w){refW=0;return;}if(D&&D.referral&&w!==refW){refW=w;renderReferral();}}).observe($('#refDaily'));
 
 $('#themeToggle').onclick=()=>{
   const cur=document.documentElement.getAttribute('data-theme');
