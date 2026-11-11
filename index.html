@@ -335,6 +335,7 @@
           <div class="mark" id="nextMark">…</div>
           <div><b id="nextVerdictTitle">숫자를 받는 중입니다</b><p id="nextVerdictBody"></p></div>
         </div>
+        <div class="reflive hidden" id="nextAuto" style="margin:8px 2px 0"></div>
       </section>
       <section>
         <div class="sec-h"><h2 id="nextTilesTitle">문자 없을 때 기준값</h2><div class="refctl"><span class="note" id="nextNote"></span><button class="btn hidden" id="nextLive" type="button">지금 조회</button></div></div>
@@ -1305,6 +1306,30 @@ function nextRate(s,d){const n=s&&s['mature'+d]||0;return n?(s['reordered'+d]||0
 function nextRev(s,d){const n=s&&s['mature'+d]||0;if(!n)return null;const m=(s['revenue'+d]||0)/n;return {n,m,v:n>1?Math.max(0,((s['revenue_sq'+d]||0)-n*m*m)/(n-1)):0};}
 function nextMde(p,n){return n?2.8*Math.sqrt(2*p*(1-p)/n):null;}
 
+function nextAutoLine(A){
+  const el=$('#nextAuto'); if(!el) return;
+  if(!A){el.classList.add('hidden');return;}
+  const md=s=>s?(+s.slice(5,7))+'/'+(+s.slice(8,10)):'', wd=s=>'일월화수목금토'[pd(s).getUTCDay()];
+  const when=s=>s?md(s.slice(0,10))+'('+wd(s.slice(0,10))+') '+s.slice(11,16):'';
+  const N=A.next||{}, X=A.last, done=X&&['sent','balance','empty'].includes(X.status);
+  const stale=!!A.at&&Date.now()-new Date(A.at.replace(' ','T')+':00+09:00').getTime()>30*60000;
+  const bad=[], parts=[];
+  if(A.error) bad.push('출고관리 서버 자동 발송 오류('+A.error+')');
+  if(A.missing&&A.missing.length) bad.push('카페24 문자 보내기 권한이 아직 없어 보내지 않고 기다립니다');
+  if(stale) bad.push('출고관리 서버 상태가 '+A.at.slice(5,16)+' 뒤로 안 바뀌었습니다 — 서버 확인 필요');
+  parts.push(A.mode&&A.mode!=='on'?'자동 발송 꺼짐(보낼 사람만 셈)':'자동 발송 켜짐 — 다음 '+when(N.at));
+  if(X){
+    const label={sent:'보냄 '+fmt(X.sent||0)+'명',balance:'보냄 '+fmt(X.sent||0)+'명',empty:'보낼 사람 없음',noscope:'권한 없어 안 보냄',cap:'한 번에 40명 넘어 멈춤',dry:'보낼 사람 '+fmt(X.eligible||0)+'명(시험)'}[X.status]||'오류'+(X.message?'('+X.message+')':'');
+    parts.push('마지막 회차 '+md(X.round)+'('+wd(X.round)+') '+String(X.at||'').slice(11,16)+' '+label+(done?'(그 회차 처음 산 회원 '+fmt(X.firsts||0)+'명 중 광고 문자 거부 '+fmt(X.refused||0)+'명 · 이미 또 산 '+fmt(X.reordered||0)+'명 뺌)':''));
+    if(X.status==='balance') bad.push('문자 잔여가 모자라 '+fmt(X.skipped||0)+'명을 못 보냈습니다 — 카페24 문자 충전 필요');
+    if((X.failed||0)+(X.unsure||0)) bad.push('보내기 실패 '+fmt((X.failed||0)+(X.unsure||0))+'명');
+  }
+  if(A.sentTotal) parts.push('지금까지 '+fmt(A.sentTotal)+'명에게 보냄');
+  if(A.lms!=null) parts.push('문자 잔여 장문 '+fmt(A.lms)+'통'+(A.lms<30?'(곧 충전 필요)':''));
+  el.textContent=(bad.length?bad.join(' · ')+' · ':'')+parts.join(' · ');
+  el.className='reflive'+(bad.length?' bad':'');
+}
+
 function renderNext(){
   const E=D.nextsms; if(!E) return;
   const esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
@@ -1319,12 +1344,13 @@ function renderNext(){
   const mark=(sym,tone,title,body)=>{const m=$('#nextMark');m.textContent=sym;
     m.style.background=tone==='bad'?'var(--bad)':tone==='warn'?'var(--warn)':tone==='good'?'var(--good)':'var(--muted)';
     $('#nextVerdictTitle').textContent=title;$('#nextVerdictBody').textContent=body;};
-  const L=E.result;
+  const L=E.result, A=L&&L.auto, ST=A?(A.missing&&A.missing.length?'카페24 문자 권한 승인 대기':A.mode&&A.mode!=='on'?'자동 발송 꺼짐':'자동 발송 켜짐'):E.status;
+  nextAutoLine(A);
   $('#nextLive').classList.toggle('hidden',!E.liveUrl);
   $('#nextLive').onclick=()=>nextLookup(false);
   $('#nextNote').textContent=L&&L.checkedAt?L.checkedAt+' 기준':'';
   if(!L||!L.arms){
-    $('#nextSub').textContent=(started?md(E.from)+' 첫 회차':(E.from?md(E.from)+' 시작 예정':'시작 전')+(E.status?' · '+E.status:''))+' · 화·금 오후 4시';
+    $('#nextSub').textContent=(started?md(E.from)+' 첫 회차':(E.from?md(E.from)+' 시작 예정':'시작 전')+(ST?' · '+ST:''))+' · 화·금 오후 4시';
     mark('…','','숫자를 받는 중입니다',E.error?'최근 갱신을 못 했습니다 — '+E.error:'화면을 열면 출고관리 서버에서 바로 받아 옵니다.');
     ['#nextTiles','#nextCmpHead','#nextCmpBody','#nextDayHead','#nextDayBody'].forEach(s=>{$(s).innerHTML='';});
     $('#nextProg').classList.add('hidden');$('#nextStory').textContent='';$('#nextFoot').textContent='';
@@ -1373,9 +1399,9 @@ function renderNext(){
     const mixed=(x,r,o,dd,sr)=>'받은 사람의 '+dd+'일 안 두 번째 주문은 문자 보내기 전 '+pc(dd===30?p30:p7)+' → '+pc(sr)+'('+pp(r.d)+')로 올랐지만, 같은 기간 문자를 못 받은 손님도 '+pp(o.d)+' 올라 그만큼 뺀 문자 몫 '+pp(x.d)+'는 운으로 생길 범위('+pp(x.lo)+' ~ '+pp(x.hi)+') 안입니다. 문자 말고 다른 이유(새 화면·광고 같은)로 다 같이 오른 몫이 커서, 더 모아야 가려집니다.';
     $('#nextSub').textContent=(live
       ?[md(L.from)+'('+wd(L.from)+') 첫 회차 · '+liveDays+'일째',rcount?'회차 '+rcount+'번':'','동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금) · 문자 보내기 전 1년과 견줌']
-      :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(E.status?' · '+E.status:''),'동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금) · 문자 보내기 전 1년과 견줌']).filter(Boolean).join(' · ');
+      :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(ST?' · '+ST:''),'동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금) · 문자 보내기 전 1년과 견줌']).filter(Boolean).join(' · ');
     if(!live){
-      mark('…','warn','아직 시작 전입니다'+(E.status?' — '+E.status:''),
+      mark('…','warn','아직 시작 전입니다'+(ST?' — '+ST:''),
         '시작하면 화·금 오후 4시마다 그 회차에 처음 산 회원 중 광고 문자에 동의한 분 모두에게 보내고, 보낸 뒤 7일·30일 안에 두 번째로 산 비율을 문자를 보내기 전 1년('+period+') 같은 조건의 손님(광고 문자에 동의한 첫 구매 회원 '+fmt(bc(7).n)+'명)과 견줍니다. 반으로 나눠 일부러 안 보내는 사람은 없습니다. '
         +'그 손님들은 문자 없이 100명 중 약 '+Math.round(p7*100)+'명이 7일 안에, 약 '+Math.round(p30*100)+'명이 30일 안에 다시 샀고'+(qs.length?', 7일 안 숫자가 분기마다 '+qText+'로 고르게 이어졌습니다. ':'. ')
         +(sendWeek>0?'비교할 손님이 이미 모여 있어 받는 사람만 모이면 되고, 받는 사람이 한 주 약 '+Math.round(sendWeek)+'명이라 7일 판정은 시작하고 약 '+w7+'주, 30일 판정은 약 '+w30+'주 뒤입니다(같은 회차 거부 손님과 견줬다면 약 '+b7+'주 · '+b30+'주).':''));
@@ -1391,7 +1417,8 @@ function renderNext(){
         +(sendWeek>0?'<br>지금 흐름(처음 산 회원 한 주 약 '+Math.round(perWeek)+'명 × 동의 약 '+Math.round(consent*100)+'%)이면 받는 사람이 한 주 약 '+Math.round(sendWeek)+'명이라 7일 판정 약 '+w7+'주'+(E.from&&a7?'('+md(a7)+'쯤)':'')+', 30일 판정 약 '+w30+'주'+(E.from&&a30?'('+md(a30)+'쯤)':'')+' 걸립니다. 같은 회차 거부 손님과 견줬다면(받은 사람 '+fmt(allinNeed)+'명 · 못 받은 사람 약 '+fmt(otherAt)+'명) 7일 약 '+b7+'주 · 30일 약 '+b30+'주였습니다.':'')
         +'<br>더 당기려면 받는 사람이 늘어야 하는데, 광고 문자에 동의한 첫 구매 손님이 한 주 이만큼이 전부입니다. 효과가 이보다 작으면 판정 날 \'차이 없음\'이 나옵니다.';
     } else if(!(S.people||0)){
-      mark('…','warn','첫 회차가 아직 등록되지 않았습니다',md(L.from)+'('+wd(L.from)+')부터 시작으로 넣었는데 등록된 회원이 없습니다. 회차 아침에 그 회차 대상(광고 문자 동의 첫 구매 회원)을 등록하면 받은 사람 숫자가 여기에 나오고, 문자 보내기 전 1년 같은 조건 손님과 견줍니다.');
+      if(L.auto) mark('…','warn',L.auto.last?'아직 받은 사람이 없습니다':'첫 자동 발송 전입니다',(L.auto.last?'':md(L.from)+'('+wd(L.from)+') 오후 4시에 첫 회차를 보냅니다. ')+'화·금 오후 4시마다 출고관리 서버가 그 회차 대상(광고 문자에 동의한 첫 구매 회원)에게 자동으로 보내고, 받은 사람이 생기면 문자 보내기 전 1년 같은 조건 손님과 견줍니다. 자동 발송 상태는 바로 아래 줄에 나옵니다.');
+      else mark('…','warn','첫 회차가 아직 등록되지 않았습니다',md(L.from)+'('+wd(L.from)+')부터 시작으로 넣었는데 등록된 회원이 없습니다. 회차 아침에 그 회차 대상(광고 문자 동의 첫 구매 회원)을 등록하면 받은 사람 숫자가 여기에 나오고, 문자 보내기 전 1년 같은 조건 손님과 견줍니다.');
     } else if(ready30){
       const [t]=tag(n30);
       if(t==='성공') mark('✓','good','성공 — 문자를 받은 사람이 30일 안에 두 번째로 더 많이 샀습니다','받은 사람 '+fmt(S.mature30)+'명(30일 지남)의 30일 안 두 번째 주문은 '+pc(nextRate(S,30))+'로, 문자 보내기 전 1년 같은 조건 손님 '+pc(p30)+'보다 '+pp(r30.d)+' 높고'+won(n30,r30,o30)+(gain!=null?' 시험 동안 늘어난 매출은 약 '+man(gain)+'입니다.':''));
@@ -1505,10 +1532,10 @@ function renderNext(){
     const gapText=G?ym(G.from)+'~'+ym(G.to)+' 처음 산 회원 '+fmt(G.consent.n+G.refuse.n)+'명을 보면 '+G.label+' 다시 산 비율이 동의 '+pc(gc)+' · 거부 '+pc(gr)+(same?'로 원래 같습니다':'로 원래 차이가 납니다'):'';
     $('#nextSub').textContent=(live
       ?[md(L.from)+'('+wd(L.from)+') 첫 회차 · '+liveDays+'일째',rcount?'회차 '+rcount+'번':'','동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금)']
-      :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(E.status?' · '+E.status:''),'동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금)']).filter(Boolean).join(' · ');
+      :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(ST?' · '+ST:''),'동의한 첫 구매 회원 모두에게 받고 사흘 뒤 오후 4시(화·금)']).filter(Boolean).join(' · ');
     if(!live){
       const w7=weeksTo(a7), w30=weeksTo(a30);
-      mark('…','warn','아직 시작 전입니다'+(E.status?' — '+E.status:''),
+      mark('…','warn','아직 시작 전입니다'+(ST?' — '+ST:''),
         '시작하면 화·금 오후 4시마다 그 회차에 처음 산 회원 중 광고 문자에 동의한 분 모두에게 보내고, 보낸 뒤 7일·30일 안에 두 번째로 산 비율을 같은 회차에 처음 샀지만 광고 문자를 받지 않는 회원과 견줍니다. 반으로 나눠 일부러 안 보내는 사람은 없습니다. '
         +(G?gapText+'. ':'')
         +'문자 없이도 처음 산 회원 100명 중 약 '+Math.round(p7*100)+'명이 7일 안에, 약 '+Math.round(p30*100)+'명이 30일 안에 다시 삽니다. '
@@ -1627,10 +1654,10 @@ function renderNext(){
   $('#nextSub').textContent=(live
     ?[md(L.from)+'('+wd(L.from)+') 첫 회차 · '+liveDays+'일째',rcount?'회차 '+rcount+'번':'',
       '처음 산 회원에게 받고 사흘 뒤 오후 4시(화·금)']
-    :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(E.status?' · '+E.status:''),'처음 산 회원에게 받고 사흘 뒤 오후 4시(화·금)']).filter(Boolean).join(' · ');
+    :[(E.from?md(E.from)+' 시작 예정':'시작 전')+(ST?' · '+ST:''),'처음 산 회원에게 받고 사흘 뒤 오후 4시(화·금)']).filter(Boolean).join(' · ');
   if(!live){
     const w7=weeksTo(eta7), w30=weeksTo(eta30);
-    mark('…','warn','아직 시작 전입니다'+(E.status?' — '+E.status:''),
+    mark('…','warn','아직 시작 전입니다'+(ST?' — '+ST:''),
       '시작하면 화·금 오후 4시마다 그 회차에 처음 산 회원(광고 문자 동의)을 반으로 나눠 한쪽에만 문자를 보내고, 보낸 뒤 7일·30일 안에 두 번째로 산 비율을 문자를 안 받은 반과 비교합니다. '
       +'문자 없이도 처음 산 회원 100명 중 약 '+Math.round(p7*100)+'명이 7일 안에, 약 '+Math.round(p30*100)+'명이 30일 안에 다시 삽니다. '
       +(armWeek>0?'지금 흐름이면 반마다 한 주 약 '+armWeek.toFixed(1)+'명씩 모여 7일 판정은 시작하고 약 '+w7+'주, 30일 판정은 약 '+w30+'주 뒤입니다.':''));
