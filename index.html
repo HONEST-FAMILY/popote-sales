@@ -1383,7 +1383,7 @@ function renderNext(){
       $('#nextTiles').innerHTML=[
         tile('처음 산 회원',perWeek?'한 주 '+Math.round(perWeek)+'명':'—',perWeek?'최근 '+weeks.length+'주 평균 · 광고 문자 동의는 약 '+Math.round(consent*100)+'%(받는 사람 한 주 약 '+Math.round(sendWeek)+'명)':'아직 한 주가 다 찬 자료가 없습니다'),
         tile('7일 안 두 번째 주문',pc(p7),fmt(bc(7).n)+'명 중 '+fmt(bc(7).x)+'명 · '+period+' 화·금 회차마다 센 값','문자 없음'),
-        tile('1년 내내 같았나',qs.length?qText:'—',qs.length?'분기마다 7일 안 두 번째 주문(동의 손님) · '+pc(qMin)+' ~ '+pc(qMax)+(fq.length?' · 거부 손님은 '+pc(fFirst)+' → '+pc(fLast)+'로 올라와 비교 기준으로 안 씀':''):'아직 세지 않았습니다',qs.length?'고름':'',qs.length?'flat':''),
+        tile('1년 내내 같았나',qs.length?pc(qMin)+' ~ '+pc(qMax):'—',qs.length?'분기마다 7일 안 두 번째 주문(동의 손님) '+qText+(fq.length?' · 거부 손님은 '+pc(fFirst)+' → '+pc(fLast)+'로 올라와 비교 기준으로 안 씀':''):'아직 세지 않았습니다',qs.length?'고름':'',qs.length?'flat':''),
         tile('30일 안 두 번째 주문',pc(p30),fmt(bc(30).n)+'명 중 '+fmt(bc(30).x)+'명'+(LR||N.mature30?' · 1인 매출(처음 산 회원 전체) '+man(N.mature30?(N.revenue30||0)/N.mature30:LR.rev30):''),'문자 없음')
       ].join('');
       $('#nextProg').classList.remove('hidden');
