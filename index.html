@@ -1129,7 +1129,7 @@ function renderExperiment(){
     const left=Math.max(0,needN-arrived), days=perDay>0?Math.ceil(left/perDay)+spend:null, when=days!=null?shift(today,days):null;
     const daysC=perDay>0&&needC?Math.ceil(Math.max(0,needC-arrived)/perDay):null, whenC=daysC!=null?shift(today,daysC):null;
     const revNext=when?' 매출 판정은 '+md(when)+'쯤입니다.':'';
-    const cartTxt=nA+' '+pc(A.carts||0,A.visitors||0)+', '+nB+' '+pc(B.carts||0,B.visitors||0);
+    const cartTxt=(PP?'켜기 전':nA)+' '+pc(A.carts||0,A.visitors||0)+', '+(PP?'켠 뒤':nB)+' '+pc(B.carts||0,B.visitors||0);
     if(!PP&&!arrived&&(N.visitors||0)) mark('!','bad','반 표시가 없습니다','시작일 뒤 이 화면에 들어온 손님 '+fmt(N.visitors)+'명에 반 표시가 없어 두 반을 비교할 수 없습니다. 반반 나누기가 켜졌는지 확인하세요.');
     else if(ready&&lo>0){tone='good';chip='성공';mark('✓','good','성공 — '+side+' 손님 100명당 '+man(d*100)+' 더 샀습니다',who+' '+fmt(collected)+'명이 모였고, 100명당 '+sman(d*100)+' 차이는 운으로 생길 범위('+sman(lo*100)+' ~ '+sman(hi*100)+')를 넘었습니다. '+(PP?'지금 손님 흐름이면':'모든 손님에게 켜면')+' 한 달 약 '+man(month)+'을 더 팔 수 있습니다.');}
     else if(ready&&hi<0){tone='bad';chip='실패';mark('✕','bad','실패 — '+side+' 손님 100명당 '+man(-d*100)+' 덜 샀습니다',who+' '+fmt(collected)+'명 기준이고, 운으로 생길 범위('+sman(lo*100)+' ~ '+sman(hi*100)+')보다도 아래입니다. 끄는 게 맞습니다.');}
@@ -1143,7 +1143,7 @@ function renderExperiment(){
     $('#expTilesTitle').textContent=PP?'켜기 전과 켠 뒤 ('+bfm+'~'+mdn(shift(L.from,-1))+' · '+mdn(L.from)+'부터)':'두 반 결과 ('+L.from+'부터)';
     $('#expTiles').innerHTML=[
       tile('늘어난 매출 (지금까지)',gain!=null?sman(gain):'—',gain!=null?'운으로 생길 범위 '+sman(lo*(B.mature||0))+' ~ '+sman(hi*(B.mature||0)):'7일 지난 손님이 생기면 나옵니다',chip,tone==='good'?'up':tone==='bad'?'down':'warn'),
-      tile('손님 100명당 매출',a&&b?man(a.m*100)+' → '+man(b.m*100):'—',nA+' → '+nB+' · 7일 안 결제'),
+      tile('손님 100명당 매출',a&&b?man(a.m*100)+' → '+man(b.m*100):'—',(PP?'켜기 전 → 켠 뒤':nA+' → '+nB)+' · 7일 안 결제'),
       tile('7일 안에 산 손님',A.mature&&B.mature?pc(A.buyers||0,A.mature)+' → '+pc(B.buyers||0,B.mature):'—',buy?'차이 '+pp(buy.d)+' (범위 '+pp(buy.lo)+' ~ '+pp(buy.hi)+')':'7일 지난 손님이 생기면 나옵니다'),
       tile('담기 누른 손님',A.visitors&&B.visitors?pc(A.carts||0,A.visitors)+' → '+pc(B.carts||0,B.visitors):'—',cart?'차이 '+pp(cart.d)+' (범위 '+pp(cart.lo)+' ~ '+pp(cart.hi)+')':'',cChip,cTone==='good'?'up':cTone==='bad'?'down':'warn')
     ].join('');
