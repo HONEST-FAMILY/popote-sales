@@ -193,6 +193,16 @@
   .expstory{line-height:1.7}
   .expstory b{color:var(--ink)}
   td.expname{color:var(--ink2);font-weight:650}
+  .wdbody{padding:2px 16px 10px}
+  .wdsay{font-size:14px;font-weight:650;color:var(--ink);margin:0 2px 12px;word-break:keep-all}
+  .wdsay small{display:block;margin-top:2px;font-size:12px;font-weight:500;color:var(--muted)}
+  .tiles.three{grid-template-columns:repeat(3,1fr);margin-bottom:16px}
+  .wdbody .tile{box-shadow:none;background:var(--card2)}
+  td small.wdp{display:inline-block;min-width:38px;margin-left:6px;font-size:11px;font-weight:650;color:var(--muted)}
+  td small.wdp.pos{color:var(--good)}
+  td small.wdp.neg{color:var(--bad)}
+  tr.wdhol td{color:var(--muted)}
+  tr.wdavg td{font-weight:700;background:var(--card2);border-top:1.5px solid var(--line)}
   .footnote{font-size:12px;color:var(--muted);line-height:1.7;padding:2px 4px}
   .footnote b{color:var(--ink2)}
   #tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
@@ -203,7 +213,7 @@
     font:inherit;font-size:12px;font-weight:650;padding:6px 11px;border-radius:9px;cursor:pointer}
   .state{padding:48px 20px;text-align:center;color:var(--muted);font-size:14px}
   .hidden{display:none!important}
-  @media (max-width:720px){ .tiles{grid-template-columns:repeat(2,1fr)} .mini{grid-template-columns:1fr} h1{font-size:21px}
+  @media (max-width:720px){ .tiles{grid-template-columns:repeat(2,1fr)} .tiles.three{grid-template-columns:1fr} .mini{grid-template-columns:1fr} h1{font-size:21px}
     .reffun,.refmini{grid-template-columns:1fr} .frow{grid-template-columns:78px 1fr 64px;gap:8px}
     .mrow{grid-template-columns:auto minmax(0,1fr);gap:6px 10px} .mrow .mbars{grid-column:1 / 3;grid-row:2} }
   @media (max-width:480px){ .tabs{gap:0;flex-wrap:wrap} .tab{flex:none;white-space:nowrap;font-size:14px;padding:12px 10px 10px} }
@@ -382,6 +392,31 @@
         <div class="tiles" id="todayTiles"></div>
       </section>
 
+      <section id="wdSec" class="hidden">
+        <div class="sec-h"><h2>같은 요일끼리 비교</h2><span class="note" id="wdNote"></span></div>
+        <div class="card">
+          <div class="filters">
+            <div class="fgroup"><div class="lab">요일</div><div class="btns" id="wdBtns"></div></div>
+            <div class="fgroup"><div class="lab">기간</div><div class="btns" id="wdNBtns"></div></div>
+            <div class="fgroup"><div class="lab">채널</div><div class="btns" id="wdChBtns"></div></div>
+            <div class="fgroup"><div class="lab">그래프</div><div class="btns" id="wdMetBtns"></div></div>
+          </div>
+          <div class="wdbody">
+            <div class="wdsay" id="wdSay"></div>
+            <div class="tiles three" id="wdTiles"></div>
+            <div class="chart-title" id="wdTitle"></div>
+            <div class="chart-sub" id="wdSub"></div>
+            <div class="scroll"><svg id="wdChart" viewBox="0 0 680 240" role="img" aria-label="같은 요일 막대 그래프"></svg></div>
+          </div>
+        </div>
+        <div class="card scroll" style="margin-top:12px">
+          <table>
+            <thead><tr><th>날짜</th><th id="wdThRev">매출</th><th>건수</th><th id="wdThPack">팩수</th><th>메모</th></tr></thead>
+            <tbody id="wdBody"></tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="rangeSec" class="hidden">
         <div class="card">
           <div class="filters">
@@ -463,7 +498,7 @@ const fmt=n=>Math.round(n).toLocaleString();
 const isDark=()=>{const t=document.documentElement.getAttribute('data-theme');
   return t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches);};
 
-let D=null, UNIT='만', sel={ch:'all',seg:'전체',met:'매출',unit:'주',from:'',to:'',preset:''};
+let D=null, UNIT='만', sel={ch:'all',seg:'전체',met:'매출',unit:'주',from:'',to:'',preset:'',wd:-1,wn:12,wch:'all',wmet:'매출'};
 const SEGS=['전체','주말','평일'], METS=['매출','건수'];
 
 // 채널 색 (Okabe-Ito, 색각이상 안전) — 데이터에 색이 없을 때 순서대로 배정
@@ -657,7 +692,7 @@ function setup(){
   else{if(D.holiday.title)$('#holiTitle').textContent=D.holiday.title;
     $('#holiSub').textContent=D.holiday.sub||'';}
   $('#stackSub').textContent=D.stackSub||('주간 전체 매출을 채널이 어떻게 나눠 갖는가 ('+UNIT+')');
-  if(D.daily) initRange();
+  if(D.daily){initRange();sel.wd=pd(D.daily.to).getUTCDay();$('#wdSec').classList.remove('hidden');}
   if(hasPacks()&&!METS.includes('팩수')) METS.push('팩수');
 
   buildBtns();
@@ -757,6 +792,124 @@ function renderToday(){
 
 const WD=['일','월','화','수','목','금','토'];
 const mdw=x=>{const t=pd(x);return (t.getUTCMonth()+1)+'/'+t.getUTCDate()+'('+WD[t.getUTCDay()]+')';};
+
+const WD_ORDER=[1,2,3,4,5,6,0], WD_WEEKS=[4,8,12,26,52];
+const holiDays=()=>(D.holidays&&D.holidays.days)||{};
+const wdPct=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)&&b>0?Math.round((a-b)/b*100):null;
+const wdSign=p=>p==null?'—':(p>0?'+':'')+p+'%';
+const wdTone=p=>p==null||p===0?'flat':(p>0?'up':'down');
+const jong=s=>{s=String(s);if(s.endsWith(')'))s=s.slice(0,-1);const c=s.charCodeAt(s.length-1)-0xAC00;return c>=0&&c<=11171&&c%28!==0;};
+function wdMets(){ return [['매출',0],['건수',1]].concat(hasPacks()?[['팩수',2]]:[]); }
+function wdVal(m,v){ if(!Number.isFinite(v)) return '—'; return m===0?fmt(v/(D.revenueDivisor||10000))+UNIT:fmt(v)+(m===1?'건':'팩'); }
+function wdLabel(s){ const y=s.slice(0,4)!==D.daily.to.slice(0,4)?s.slice(2,4)+'.':''; return y+mdw(s); }
+function wdRows(){
+  const dl=D.daily, H=holiDays(), ids=sel.wch==='all'?D.channels.map(c=>c.id):[sel.wch], out=[];
+  const last=shift(dl.to,-((pd(dl.to).getUTCDay()-sel.wd+7)%7));
+  for(let k=0;k<=sel.wn;k++){
+    const s=shift(last,-7*k); if(s<dl.from) break;
+    const i=Math.round((pd(s)-pd(dl.from))/DAY);
+    const v=ids.reduce((a,id)=>{const c=dl.channels[id]||{r:[],c:[]};return [a[0]+(c.r[i]||0),a[1]+(c.c[i]||0),a[2]+packOf(c,i)];},[0,0,0]);
+    out.push({s,v,hol:H[s]||'',eve:H[shift(s,1)]||''});
+  }
+  return out;
+}
+function wdAvg(rows,m){
+  const xs=rows.filter(x=>!x.hol&&Number.isFinite(x.v[m])).map(x=>x.v[m]);
+  return xs.length?{v:xs.reduce((a,b)=>a+b,0)/xs.length,n:xs.length}:null;
+}
+function wdCmp(noun,p,end){
+  if(Math.abs(p)<3) return noun+(jong(noun)?'과 ':'와 ')+(end?'비슷합니다':'비슷하고');
+  return noun+'보다 '+Math.abs(p)+'% '+(p>0?(end?'많습니다':'많고'):(end?'적습니다':'적고'));
+}
+function buildWdBtns(){
+  if(!D.daily) return;
+  mkBtns($('#wdBtns'),WD_ORDER.map(w=>({t:WD[w],v:w})),'wd',false,renderWeekday);
+  mkBtns($('#wdNBtns'),WD_WEEKS.map(n=>({t:n+'주',v:n})),'wn',false,renderWeekday);
+  mkBtns($('#wdChBtns'),chList().map(c=>({t:c.name,v:c.id,col:chColor(c.id)})),'wch',true,renderWeekday);
+  mkBtns($('#wdMetBtns'),wdMets().map(x=>({t:x[0],v:x[0]})),'wmet',false,renderWeekday);
+}
+function renderWeekday(){
+  if(!D.daily) return;
+  const dl=D.daily, rows=wdRows(), shown=rows.slice(0,sel.wn), N=shown.length, day=WD[sel.wd]+'요일', mets=wdMets();
+  if(!mets.some(x=>x[0]===sel.wmet)) sel.wmet='매출';
+  const m=mets.find(x=>x[0]===sel.wmet)[1], a=shown[0], p=rows[1], who=sel.wch==='all'?'':chName(sel.wch)+' ';
+  const hd=D.holidays&&D.holidays.days, holN=shown.filter(x=>x.hol).length;
+  $('#wdNote').textContent=mdw(dl.to)+'까지 끝난 날만 비교'+(hd?' · 공휴일은 평균에서 뺐습니다':'')
+    +(hd&&D.holidays.from&&N&&shown[N-1].s<D.holidays.from?' · 공휴일 표시는 '+D.holidays.from+'부터':'');
+  if(!a){$('#wdSay').textContent='';$('#wdTiles').innerHTML='';$('#wdBody').innerHTML='';return;}
+
+  const av=mets.map(x=>wdAvg(shown,x[1])), lastWeek=p&&!p.hol&&!a.hol?p:null;
+  let say='', small='';
+  if(a.hol) say=wdLabel(a.s)+' '+who+'매출 '+wdVal(0,a.v[0])+' — '+a.hol+(jong(a.hol)?'이라':'라')+' 평소 '+day+'과 비교하기 어렵습니다';
+  else{
+    const pw=lastWeek?wdPct(a.v[0],lastWeek.v[0]):null, pa=av[0]&&av[0].n>1?wdPct(a.v[0],av[0].v):null;
+    const parts=[];
+    if(pw!=null) parts.push(['지난주 '+day,pw]);
+    if(pa!=null) parts.push(['최근 '+N+'주 '+day+' 평균',pa]);
+    say=wdLabel(a.s)+' '+who+'매출 '+wdVal(0,a.v[0])+(parts.length?' — '+parts.map((x,i)=>wdCmp(x[0],x[1],i===parts.length-1)).join(', '):'');
+    const xs=shown.filter(x=>!x.hol).map(x=>x.v[0]), rank=1+xs.filter(v=>v>a.v[0]).length;
+    const base='최근 '+N+'주 '+day+(holN?'(공휴일 '+holN+'번 뺌)':'');
+    if(xs.length>2) small=rank===1?base+' 중 매출이 가장 많은 날입니다':rank===xs.length?base+' 중 매출이 가장 적은 날입니다':base+' '+xs.length+'번 중 매출 많은 순 '+rank+'번째';
+    if(p&&p.hol) small=(small?small+' · ':'')+'지난주 '+mdw(p.s)+(jong(mdw(p.s))?'은 ':'는 ')+p.hol+(jong(p.hol)?'이라':'라')+' 평균과만 비교했습니다';
+  }
+  $('#wdSay').innerHTML=say+(small?'<small>'+small+'</small>':'');
+
+  $('#wdTiles').innerHTML=mets.map(([name,k],j)=>{
+    const pw=lastWeek?wdPct(a.v[k],lastWeek.v[k]):null, pa=av[j]&&!a.hol?wdPct(a.v[k],av[j].v):null;
+    const chip=pw!=null?'<span class="chip '+wdTone(pw)+'">지난주 '+wdSign(pw)+'</span>':'';
+    const d=[lastWeek?'지난주 '+wdVal(k,lastWeek.v[k]):'',av[j]?N+'주 평균 '+wdVal(k,av[j].v)+(pa!=null?' ('+wdSign(pa)+')':''):''].filter(Boolean).join(' · ');
+    return '<div class="tile"><div class="k">'+wdLabel(a.s)+' '+name+'</div><div class="v">'+wdVal(k,a.v[k])+chip+'</div><div class="d">'+d+'</div></div>';
+  }).join('');
+
+  const seq=shown.slice().reverse(), sc=m===0?(D.revenueDivisor||10000):1, unit=m===0?UNIT:(m===1?'건':'팩');
+  const vs=seq.map(x=>Number.isFinite(x.v[m])?x.v[m]/sc:null), avs=av[mets.findIndex(x=>x[1]===m)];
+  const avl=avs?avs.v/sc:null, col=chColor(sel.wch);
+  const W=680,H=240,padL=46,padR=62,padT=18,padB=46, iw=W-padL-padR, ih=H-padT-padB;
+  const max=(Math.max(...vs.map(v=>v||0),avl||0,0)||1)*1.15;
+  const x=i=>padL+(iw/seq.length)*(i+0.5), bw=Math.min(40,(iw/seq.length)*0.56), y=v=>padT+ih-(v/max)*ih;
+  let s=`<svg viewBox="0 0 ${W} ${H}">`;
+  for(let t=0;t<=4;t++){const gv=max*t/4,gy=y(gv);
+    s+=`<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/>`;
+    s+=`<text class="axis-y" x="${padL-7}" y="${(gy+3).toFixed(1)}" text-anchor="end">${fmt(gv)}</text>`;}
+  s+=`<line class="baseline" x1="${padL}" y1="${padT+ih}" x2="${W-padR}" y2="${padT+ih}"/>`;
+  const step=Math.max(1,Math.ceil(seq.length*44/iw));
+  seq.forEach((r,i)=>{
+    const v=vs[i], by=y(v||0);
+    if(v!=null) s+=`<rect data-i="${i}" x="${(x(i)-bw/2).toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,padT+ih-by).toFixed(1)}" rx="${bw<8?1:4}" fill="${col}"${r.hol?' opacity="0.35"':''}></rect>`;
+    if(seq.length<=16) s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(by-6).toFixed(1)}" text-anchor="middle">${v==null?'—':fmt(v)}</text>`;
+    if((i%step===0&&seq.length-1-i>=step)||i===seq.length-1){const t=pd(r.s);
+      s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+16).toFixed(1)}" text-anchor="middle">${(t.getUTCMonth()+1)+'/'+t.getUTCDate()}</text>`;}
+    if(r.hol&&seq.length<=26) s+=`<text class="situ" x="${x(i).toFixed(1)}" y="${(padT+ih+31).toFixed(1)}" text-anchor="middle">${r.hol.length>5?r.hol.slice(0,5)+'…':r.hol}</text>`;
+  });
+  if(avl!=null){const ay=y(avl).toFixed(1);
+    s+=`<line x1="${padL}" y1="${ay}" x2="${W-padR}" y2="${ay}" stroke="var(--ink2)" stroke-width="1.3" stroke-dasharray="5 4" opacity="0.7"/>`;
+    s+=`<text class="axis-y" x="${W-padR+6}" y="${(+ay+3.5).toFixed(1)}" text-anchor="start" fill="var(--ink2)">평균 ${fmt(avl)}</text>`;}
+  s+=`</svg>`;
+  $('#wdChart').outerHTML=s.replace('<svg ','<svg id="wdChart" ');
+  $('#wdChart').querySelectorAll('rect[data-i]').forEach(el=>{
+    const r=seq[+el.dataset.i];el.style.cursor='pointer';
+    el.addEventListener('mousemove',e=>showTip(e,`<div>${wdLabel(r.s)} · ${chName(sel.wch)}${r.hol?' · '+r.hol:''}</div><div class="t2">${mets.map(([n,k])=>wdVal(k,r.v[k])).join(' · ')}</div>`));
+    el.addEventListener('mouseleave',hideTip);
+  });
+  $('#wdTitle').textContent=`${chName(sel.wch)} · ${day} · ${sel.wmet}`;
+  $('#wdSub').textContent=`최근 ${N}주 ${day} ${sel.wmet} (${unit})`+(avl!=null?' · 점선은 평균'+(hd?'(공휴일 뺌)':''):'')+(holN?' · 흐린 막대는 공휴일':'');
+
+  const div=D.revenueDivisor||10000, pk=hasPacks();
+  const cell=(r,q,k)=>{
+    const v=r.v[k], n=Number.isFinite(v)?fmt(k===0?v/div:v):'—';
+    const pc=q&&!r.hol&&!q.hol?wdPct(v,q.v[k]):null;
+    return `<td>${n}<small class="wdp ${pc>0?'pos':(pc<0?'neg':'')}">${pc==null?'':wdSign(pc)}</small></td>`;
+  };
+  let body=shown.map((r,i)=>{
+    const q=rows[i+1], memo=r.hol?r.hol+' · 평균에서 뺌':(r.eve?'다음 날 '+r.eve:'');
+    return `<tr${r.hol?' class="wdhol"':''}><td>${wdLabel(r.s)}</td>${cell(r,q,0)}${cell(r,q,1)}${pk?cell(r,q,2):''}<td class="situcell">${memo}</td></tr>`;
+  }).join('');
+  if(av[0]) body+=`<tr class="wdavg"><td>평균</td><td>${fmt(av[0].v/div)}<small class="wdp"></small></td><td>${fmt(av[1].v)}<small class="wdp"></small></td>`
+    +(pk?`<td>${av[2]?fmt(av[2].v):'—'}<small class="wdp"></small></td>`:'')+`<td class="situcell">${av[0].n}번${holN?' (공휴일 '+holN+'번 뺌)':''}</td></tr>`;
+  $('#wdBody').innerHTML=body;
+  $('#wdThRev').textContent='매출('+UNIT+')';
+  $('#wdThPack').classList.toggle('hidden',!pk);
+}
 function refMini(host,days,series,opt){
   const W=Math.round(Math.min(640,Math.max(260,host.clientWidth||480))),H=180,padL=30,padR=6,padT=26,padB=24,iw=W-padL-padR,ih=H-padT-padB,n=Math.max(1,days.length);
   const tot=days.map((_,i)=>opt.grouped?Math.max(0,...series.map(s=>s.vals[i]||0)):series.reduce((a,s)=>a+(s.vals[i]||0),0));
@@ -1982,6 +2135,7 @@ function buildBtns(){
   mkBtns($('#chBtns'),chList().map(c=>({t:c.name,v:c.id,col:chColor(c.id)})),'ch',true);
   mkBtns($('#segBtns'),SEGS.map(k=>({t:k,v:k})),'seg',false);
   mkBtns($('#metBtns'),METS.map(k=>({t:k,v:k})),'met',false);
+  buildWdBtns();
 }
 
 const tip=$('#tip');
@@ -2131,7 +2285,7 @@ function renderTable(){
 }
 
 function render(){renderMain();renderTable();}
-function renderAll(){renderMain();renderStack();renderLine();renderTable();}
+function renderAll(){renderWeekday();renderMain();renderStack();renderLine();renderTable();}
 addEventListener('scroll',hideTip,{passive:true});
 let refW=0;
 if(window.ResizeObserver) new ResizeObserver(()=>{const w=$('#refDaily').clientWidth;if(!w){refW=0;return;}if(D&&D.referral&&w!==refW){refW=w;renderReferral();}}).observe($('#refDaily'));
