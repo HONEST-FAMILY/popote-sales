@@ -1133,6 +1133,7 @@ function renderExperiment(){
   const buy=live?expProp(A.buyers||0,A.mature||0,B.buyers||0,B.mature||0):null;
   const rep=live?expProp(A.repeated||0,A.repeat_base||0,B.repeated||0,B.repeat_base||0):null;
   const C=PP&&L.check?L.check:null, ca=C?expPV(C.before):null, cb=C?expPV(C.after):null;
+  const AD=PP&&L.ads?L.ads:null, adName=D.adtest?adTabName():'광고 첫 화면';
   const ck=C&&((C.after||{}).mature||0)>=EXP_CHECK_MIN?expRatio(ca,cb):null, adj=!!(ck&&a&&b&&(ck.lo>1||ck.hi<1)), kk=adj?ck.k:1;
   const se=a&&b?Math.sqrt(b.v/b.n+kk*kk*a.v/a.n+(adj?a.m*a.m*kk*kk*ck.s*ck.s:0)):null, d=se!=null?b.m-a.m*kk:null, lo=se!=null?d-1.96*se:null, hi=se!=null?d+1.96*se:null;
   const ckPct=x=>(x>1?'+':x<1?'−':'')+Math.round(Math.abs(x-1)*100)+'%';
@@ -1171,7 +1172,7 @@ function renderExperiment(){
       +'구매율('+(pb*100).toFixed(1)+'%)이 3분의 1 오를 때 운이 아니라고 가려낼 수 있는 수입니다.'
       +(q&&q.floorB?'<br>켜기 전 손님 수가 정해져 있어 구매율이 '+(pb*100).toFixed(1)+'%에서 약 '+(pb*(1+q.floorB)*100).toFixed(1)+'% 넘게 올라야 가려집니다. 그보다 작은 효과는 켠 뒤 손님을 오래 모아도 가려내기 어렵습니다.':'')
       +(split&&split.buy?'<br>반으로 나눴다면 두 쪽을 처음부터 모아야 해 구매율 판정까지 '+span(split.buy)+' 걸립니다.':'')
-      +'<br>켜는 날부터는 켜기 전·켠 뒤 모두 메인 배너·팝업으로 들어온 손님만 셉니다. 문자·광고 링크로 온 손님은 켜기 전 몫이 없어 뺍니다.';
+      +'<br>켜는 날부터는 켜기 전·켠 뒤 모두 첫 화면 메인 배너·팝업·추천 칸으로 들어온 손님만 셉니다. 문자·광고 링크로 온 손님은 켜기 전 몫이 없어 뺍니다.';
   } else if(!live){
     const start=E.from&&E.from>today?E.from:today;
     const base=expProject(N,perDay,null,start,spend), fast=E.ads?expProject(N,perDay,E.ads,start,spend):null;
@@ -1214,7 +1215,7 @@ function renderExperiment(){
     ].join('');
     const bar=(x,n)=>'<div class="bar"><i style="width:'+(n?Math.min(100,x/n*100):0).toFixed(1)+'%"></i></div>';
     $('#expProg').classList.remove('hidden');
-    $('#expProg').innerHTML='<b>구매율 판정</b> — 들어온 뒤 7일 지난 켠 뒤 손님 '+fmt(collected)+'명 / 필요한 '+(needB?fmt(needB)+'명':'—')+(readyB?' · 판정 끝':when?' · 예상 판정일 '+when:'')+' · 켠 뒤 들어온 손님 '+fmt(arrived)+'명'+(perDay?' · 하루 약 '+Math.round(perDay)+'명':'')+bar(collected,needB)
+    $('#expProg').innerHTML='<b>구매율 판정</b> — 들어온 뒤 7일 지난 켠 뒤 손님 '+fmt(collected)+'명 / 필요한 '+(needB?fmt(needB)+'명':'—')+(readyB?' · 판정 끝':when?' · 예상 판정일 '+when:'')+' · 켠 뒤 들어온 손님 '+fmt(arrived)+'명'+(AD&&AD.after?' (메타 광고에서 바로 온 '+fmt(AD.after)+'명은 따로 셈)':'')+(perDay?' · 하루 약 '+Math.round(perDay)+'명':'')+bar(collected,needB)
       +'<div style="margin-top:8px"><span class="situcell">필요한 손님 수는 켜기 전 손님('+fmt(A.visitors||0)+'명)과 견줄 때 구매율이 3분의 1 오르면('+pc(A.buyers||0,A.mature||0)+' → '+(ab?(Math.min(.95,ab.m*(1+EXP_LIFT))*100).toFixed(1)+'%':'—')+') 운이 아니라고 가려낼 수 있는 수이고, 켜기 전 숫자로 매일 다시 셉니다.</span></div>';
   } else {
     const left=Math.max(0,needN-arrived), days=perDay>0?Math.ceil(left/perDay)+spend:null, when=days!=null?shift(today,days):null;
@@ -1264,6 +1265,7 @@ function renderExperiment(){
   const CB=C?C.before||{}:{}, CA=C?C.after||{}:{};
   $('#expCmpBody').innerHTML=lines.map(l=>'<tr><td class="expname">'+esc(l[0])+'</td><td>'+l[1](X[0])+'</td><td>'+(X[1]?l[1](X[1]):wait)+'</td><td>'+(live?l[2]:wait)+'</td></tr>').join('')
     +'<tr><td class="expname">개월 버튼 누른 손님</td><td>—</td><td>'+(live?pc(B.buttons||0,B.visitors||0):wait)+'</td><td>—</td></tr>'
+    +(AD?'<tr><td class="expname">따로 센 손님 — 메타 광고에서 바로 온 손님</td><td>'+(AD.before?fmt(AD.before)+'명':'<span class="situcell">시험 전</span>')+'</td><td>'+fmt(AD.after||0)+'명</td><td><span class="situcell">판정 숫자에 안 넣음 · 광고 쪽 숫자는 '+esc(adName)+' 탭</span></td></tr>':'')
     +(PP?'<tr><td class="expname">로그인한 손님 (7일 지난 손님 중)</td><td>'+pc(A.linked||0,A.mature||0)+'</td><td>'+pc(B.linked||0,B.mature||0)+'</td><td>'+(few?'—':range(expProp(A.linked||0,A.mature||0,B.linked||0,B.mature||0),pp))+'</td></tr>'
       +'<tr><td class="expname">확인 — 이 화면에 안 온 회원 구매율</td><td>'+(C?pc(CB.buyers||0,CB.mature||0)+' <span class="situcell">'+fmt(CB.mature||0)+'명</span>':'—')+'</td><td>'+(CA.mature?pc(CA.buyers||0,CA.mature)+' <span class="situcell">'+fmt(CA.mature)+'명</span>':'<span class="situcell">7일 지난 회원 없음</span>')+'</td><td>'+(ckB?ckPct(ckB.k)+' <span class="situcell">'+ckPct(ckB.lo)+' ~ '+ckPct(ckB.hi)+(J&&J.adj?' · 판정에 맞춤':' · 그대로 판정')+'</span>':'<span class="situcell">7일 지난 회원 '+EXP_CHECK_MIN+'명부터</span>')+'</td></tr>'
       +'<tr><td class="expname">확인 — 이 화면에 안 온 회원 100명당 매출</td><td>'+(ca?man(ca.m*100)+' <span class="situcell">'+fmt(CB.mature||0)+'명</span>':'—')+'</td><td>'+(cb?man(cb.m*100)+' <span class="situcell">'+fmt(CA.mature||0)+'명</span>':'<span class="situcell">7일 지난 회원 없음</span>')+'</td><td>'+(ck?ckPct(ck.k)+' <span class="situcell">'+ckPct(ck.lo)+' ~ '+ckPct(ck.hi)+(adj?' · 매출 칸에 맞춤':' · 매출 칸 그대로')+'</span>':'<span class="situcell">7일 지난 회원 '+EXP_CHECK_MIN+'명부터</span>')+'</td></tr>':'');
@@ -1292,7 +1294,8 @@ function renderExperiment(){
   }
   $('#expFoot').innerHTML='<b>세는 법</b> — 손님은 이 화면('+esc(short(E.page))+')에 처음 들어온 브라우저(휴대폰·컴퓨터) 하나를 한 명으로 셉니다. 검수 방문은 빼고, 같은 회원이 두 기기로 들어오면 처음 기기 하나로만 셉니다. '
     +(pre
-      ?'켜기 전은 '+esc(bf)+'부터 켜기 전날까지, 켠 뒤는 켠 날부터 이 화면에 처음 온 손님입니다. 켜는 날부터는 두 기간 모두 메인 배너·팝업으로 들어온 손님만 세고, 문자·광고 링크로 온 손님은 켜기 전 몫이 없어 뺍니다. '
+      ?'켜기 전은 '+esc(bf)+'부터 켜기 전날까지, 켠 뒤는 켠 날부터 이 화면에 처음 온 손님입니다. 켜는 날부터는 두 기간 모두 첫 화면 메인 배너·팝업·추천 칸으로 들어온 손님만 세고, 문자·광고 링크로 온 손님은 켜기 전 몫이 없어 뺍니다. '
+        +(AD?'메타 광고 첫 화면 시험이 보낸 주소(메타 광고로 처음 온 손님의 반)로 이 화면에 들어온 브라우저도 같은 까닭으로 세지 않습니다. 그 브라우저는 나중에 첫 화면 배너를 눌러 와도 계속 세지 않고, 광고 쪽 숫자는 '+esc(adName)+' 탭에서 봅니다 — 지금 켠 뒤 '+fmt(AD.after||0)+'명. ':'')
         +'광고 문자를 받은 회원은 첫 화면을 거쳐 들어와도, 들어온 뒤 7일이 그 문자 기간(문자 혜택 마감까지)과 겹치면 켜기 전·켠 뒤 모두 세지 않습니다. 문자 덕에 산 돈이 이 화면 덕처럼 섞이지 않게 하려는 것입니다'
         +(L.held&&L.held.lists&&L.held.lists.length?' — 지금 '+L.held.lists.map(x=>mdn(x.from)+' 문자 받은 회원 '+fmt(x.members)+'명('+mdn(x.to)+'까지)').join(', ')+', 그래서 뺀 손님 켜기 전 '+fmt((L.held.arms||{}).before||0)+'명 · 켠 뒤 '+fmt((L.held.arms||{}).after||0)+'명':'')+'. '
         +'판정은 구매율 하나로 합니다. 구매율은 이 화면에 처음 온 손님 중 들어온 뒤 7일 안에 결제한 손님의 비율입니다. 몇 명이 들어왔는지가 아니라, 들어온 손님이 구매까지 이어졌는지를 켜기 전과 켠 뒤로 견줍니다. '
