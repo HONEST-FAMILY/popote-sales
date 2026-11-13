@@ -1079,7 +1079,7 @@ function renderExperiment(){
   const P=expSum(A,B), dyn=expNeed(N), dynC=expNeedCart(N), liveR=live?expNeed(P):null, liveC=live?expNeedCart(P):null, fixed=PP?expPrePost(A,perDay,today,spend):null;
   const needN=PP?((fixed&&fixed.needR)||0):live?((liveR&&liveR.n)||E.need||0):((dyn&&dyn.n)||E.need||0), needC=PP?((fixed&&fixed.needC)||0):live?((liveC&&liveC.n)||0):((dynC&&dynC.n)||0);
   const a=expPV(live?A:N), b=live?expPV(B):null;
-  const few=PP&&(B.mature||0)<EXP_CHECK_MIN, cart=live&&!(PP&&(B.visitors||0)<EXP_CHECK_MIN)?expProp(A.carts||0,A.visitors||0,B.carts||0,B.visitors||0):null;
+  const few=PP&&(B.mature||0)<EXP_CHECK_MIN, fewV=PP&&(B.visitors||0)<EXP_CHECK_MIN, cart=live&&!fewV?expProp(A.carts||0,A.visitors||0,B.carts||0,B.visitors||0):null;
   const buy=live?expProp(A.buyers||0,A.mature||0,B.buyers||0,B.mature||0):null;
   const rep=live?expProp(A.repeated||0,A.repeat_base||0,B.repeated||0,B.repeat_base||0):null;
   const C=PP&&L.check?L.check:null, ca=C?expPV(C.before):null, cb=C?expPV(C.after):null;
@@ -1157,9 +1157,9 @@ function renderExperiment(){
     else mark('…','warn','아직 판정 전입니다','구매율 판정은 들어온 뒤 7일 지난 켠 뒤 손님 '+(needB?fmt(needB)+'명 중 '+fmt(collected)+'명('+Math.min(100,Math.round(collected/needB*100))+'%)':fmt(collected)+'명')+(when?' · '+md(when)+'쯤':'')+'입니다.'+(collected?'':' 샀는지는 들어온 뒤 7일이 지나야 셀 수 있어 켠 뒤 구매율은 '+opens+'부터 나옵니다.')+' 그 전 숫자는 운으로 오르내려 성공·실패로 읽지 않습니다.');
     $('#expTilesTitle').textContent='켜기 전과 켠 뒤 ('+bfm+'~'+mdn(shift(L.from,-1))+' · '+mdn(L.from)+'부터)';
     $('#expTiles').innerHTML=[
-      tile('구매율 · 7일 안에 산 손님',pc(A.buyers||0,A.mature||0)+' → '+(B.mature?pc(B.buyers||0,B.mature):'—'),J?'켜기 전 → 켠 뒤 · 차이 '+pp(J.d)+' (범위 '+pp(J.lo)+' ~ '+pp(J.hi)+')'+(J.adj?' · 안 온 회원 몫 맞춤':''):'켜기 전 → 켠 뒤 · '+((B.mature||0)?'차이는 7일 지난 켠 뒤 손님 '+EXP_CHECK_MIN+'명부터 ('+fmt(B.mature)+'명)':'켠 뒤는 '+opens+'부터 나옵니다'),chip,tone==='good'?'up':tone==='bad'?'down':'warn'),
-      tile('담기 누른 손님',pc(A.carts||0,A.visitors||0)+' → '+(B.visitors?pc(B.carts||0,B.visitors):'—'),cart?'차이 '+pp(cart.d)+' (범위 '+pp(cart.lo)+' ~ '+pp(cart.hi)+')':'켜기 전 → 켠 뒤 · 차이는 켠 뒤 손님 '+EXP_CHECK_MIN+'명부터 ('+fmt(B.visitors||0)+'명)',cChip,cTone==='bad'?'down':'warn'),
-      tile('손님 100명당 매출',(a?man(a.m*100):'—')+' → '+(b?man(b.m*100):'—'),'켜기 전 → 켠 뒤 · 7일 안 결제'+(se!=null&&!few?' · 차이 '+sman(d*100)+(adj?' · 안 온 회원 몫 맞춤':''):'')),
+      tile('구매율 · 7일 안에 산 손님',pc(A.buyers||0,A.mature||0)+' → '+(few?'—':pc(B.buyers||0,B.mature)),J?'켜기 전 → 켠 뒤 · 차이 '+pp(J.d)+' (범위 '+pp(J.lo)+' ~ '+pp(J.hi)+')'+(J.adj?' · 안 온 회원 몫 맞춤':''):(B.mature||0)?'7일 지난 켠 뒤 손님 '+fmt(B.mature)+'명 중 '+fmt(B.buyers||0)+'명 · '+EXP_CHECK_MIN+'명부터 비율을 봅니다':'켜기 전 → 켠 뒤 · 켠 뒤는 '+opens+'부터 나옵니다',chip,tone==='good'?'up':tone==='bad'?'down':'warn'),
+      tile('담기 누른 손님',pc(A.carts||0,A.visitors||0)+' → '+(fewV?'—':pc(B.carts||0,B.visitors)),cart?'차이 '+pp(cart.d)+' (범위 '+pp(cart.lo)+' ~ '+pp(cart.hi)+')':'켠 뒤 손님 '+fmt(B.visitors||0)+'명 중 '+fmt(B.carts||0)+'명 · '+EXP_CHECK_MIN+'명부터 비율을 봅니다',cChip,cTone==='bad'?'down':'warn'),
+      tile('손님 100명당 매출',(a?man(a.m*100):'—')+' → '+(b&&!few?man(b.m*100):'—'),'켜기 전 → 켠 뒤 · 7일 안 결제'+(se!=null&&!few?' · 차이 '+sman(d*100)+(adj?' · 안 온 회원 몫 맞춤':''):'')),
       tile('늘어난 매출 (지금까지)',gain!=null&&!few?sman(gain):'—',gain!=null&&!few?'운으로 생길 범위 '+sman(lo*(B.mature||0))+' ~ '+sman(hi*(B.mature||0)):'7일 지난 켠 뒤 손님 '+EXP_CHECK_MIN+'명부터 나옵니다 ('+fmt(B.mature||0)+'명)')
     ].join('');
     const bar=(x,n)=>'<div class="bar"><i style="width:'+(n?Math.min(100,x/n*100):0).toFixed(1)+'%"></i></div>';
