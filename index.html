@@ -443,7 +443,7 @@
         <div class="sec-h"><h2 id="tableTitle">주간 상세</h2></div>
         <div class="card scroll">
           <table>
-            <thead><tr><th id="thPeriod">주</th><th id="thRev">매출</th><th>건수</th><th id="thDelta">전주 대비</th><th>상황</th></tr></thead>
+            <thead><tr><th id="thPeriod">주</th><th id="thRev">매출</th><th>건수</th><th id="thPack" class="hidden">팩수</th><th id="thDelta">전주 대비</th><th>상황</th></tr></thead>
             <tbody id="tbody"></tbody>
           </table>
         </div>
@@ -512,11 +512,18 @@ function prevRange(from,to){
   return [isoD(new Date(Date.UTC(a.getUTCFullYear(),a.getUTCMonth()-k,1))),isoD(new Date(Date.UTC(py,pm,day))),k===12?'작년 대비':'직전 대비'];
 }
 
+function hasPacks(){ return !!(D.daily&&D.channels.some(c=>Array.isArray((D.daily.channels[c.id]||{}).p))); }
+function packFrom(){
+  const dl=D.daily, ps=D.channels.map(c=>(dl.channels[c.id]||{}).p||[]);
+  for(let i=0;i<(ps[0]||[]).length;i++){if(ps.every(p=>p[i]!=null)) return shift(dl.from,i);}
+  return null;
+}
+const packOf=(s,i)=>s.p&&s.p[i]!=null?s.p[i]:NaN;
 function rangeSums(from,to){
-  const dl=D.daily, i0=Math.round((pd(from)-pd(dl.from))/DAY), i1=Math.round((pd(to)-pd(dl.from))/DAY), out={all:[0,0]};
-  D.channels.forEach(c=>{const s=dl.channels[c.id]||{r:[],c:[]};let r=0,n=0;
-    for(let i=Math.max(0,i0);i<=i1;i++){r+=s.r[i]||0;n+=s.c[i]||0;}
-    out[c.id]=[r,n];out.all[0]+=r;out.all[1]+=n;});
+  const dl=D.daily, i0=Math.round((pd(from)-pd(dl.from))/DAY), i1=Math.round((pd(to)-pd(dl.from))/DAY), out={all:[0,0,0]};
+  D.channels.forEach(c=>{const s=dl.channels[c.id]||{r:[],c:[]};let r=0,n=0,p=0;
+    for(let i=Math.max(0,i0);i<=i1;i++){r+=s.r[i]||0;n+=s.c[i]||0;p+=packOf(s,i);}
+    out[c.id]=[r,n,p];out.all[0]+=r;out.all[1]+=n;out.all[2]+=p;});
   return out;
 }
 
@@ -537,9 +544,9 @@ function rebuild(){
     const key=sel.unit==='일'?t:(sel.unit==='월'?d.getUTCFullYear()*12+d.getUTCMonth():t-w*DAY);
     ['전체',w>=4?'주말':'평일'].forEach(seg=>{
       const L=P[seg];let p=L[L.length-1];
-      if(!p||p.key!==key){p={key,a:d,b:d,v:{}};ids.forEach(id=>p.v[id]=[0,0]);L.push(p);}
+      if(!p||p.key!==key){p={key,a:d,b:d,v:{}};ids.forEach(id=>p.v[id]=[0,0,0]);L.push(p);}
       p.b=d;
-      ids.forEach(id=>{const s=dl.channels[id];if(s){p.v[id][0]+=s.r[i]||0;p.v[id][1]+=s.c[i]||0;}});
+      ids.forEach(id=>{const s=dl.channels[id];if(s){p.v[id][0]+=s.r[i]||0;p.v[id][1]+=s.c[i]||0;p.v[id][2]+=packOf(s,i);}else p.v[id][2]=NaN;});
     });
   }
   const isFull=(p,seg)=>{
@@ -547,22 +554,25 @@ function rebuild(){
     if(sel.unit==='월'){const y=p.a.getUTCFullYear(),m=p.a.getUTCMonth();return Date.UTC(y,m,1)>=F&&Date.UTC(y,m+1,1)-DAY<=T;}
     return Math.round((p.b-p.a)/DAY)+1===(seg==='전체'?7:(seg==='주말'?3:4));
   };
-  const tot=(p,id)=>id==='all'?ids.reduce((a,k)=>[a[0]+p.v[k][0],a[1]+p.v[k][1]],[0,0]):p.v[id];
+  const tot=(p,id)=>id==='all'?ids.reduce((a,k)=>[a[0]+p.v[k][0],a[1]+p.v[k][1],a[2]+p.v[k][2]],[0,0,0]):p.v[id];
+  const known=v=>Number.isFinite(v)?v:null;
   D.weeks={all:P['전체'].map(label),weekend:P['주말'].map(label),weekday:P['평일'].map(label)};
   D.partial={};SEGS.forEach(seg=>{D.partial[seg]=P[seg].map(p=>!isFull(p,seg));});
   D.series={};
   ids.concat('all').forEach(id=>{D.series[id]={};
-    SEGS.forEach(seg=>{D.series[id][seg]={r:P[seg].map(p=>Math.round(tot(p,id)[0]/div)),c:P[seg].map(p=>tot(p,id)[1])};});});
+    SEGS.forEach(seg=>{D.series[id][seg]={r:P[seg].map(p=>Math.round(tot(p,id)[0]/div)),c:P[seg].map(p=>tot(p,id)[1]),p:P[seg].map(p=>known(tot(p,id)[2]))};});});
 
   const cur=rangeSums(sel.from,sel.to), len=Math.round((T-F)/DAY)+1;
   const [pFrom,pTo,pWord]=prevRange(sel.from,sel.to), prev=pFrom>=dl.from?rangeSums(pFrom,pTo):null;
   D.tiles=['all'].concat(ids).map(id=>{
-    const [r,n]=cur[id];let chip='',tone='flat';
+    const [r,n,pk]=cur[id];let chip='',tone='flat';
     if(prev&&prev[id][0]){const g=Math.round((r-prev[id][0])/prev[id][0]*100);chip=pWord+' '+(g>0?'+':'')+g+'%';tone=g>0?'up':(g<0?'down':'flat');}
     return {k:id==='all'?'종합 매출':chName(id),v:fmt(r/div)+UNIT,
-      d:fmt(n)+'건'+(id==='all'?'':' · 비중 '+(cur.all[0]?Math.round(r/cur.all[0]*100):0)+'%'),chip,chipTone:tone};
+      d:fmt(n)+'건'+(Number.isFinite(pk)?' · '+fmt(pk)+'팩':'')+(id==='all'?'':' · 비중 '+(cur.all[0]?Math.round(r/cur.all[0]*100):0)+'%'),chip,chipTone:tone};
   });
-  $('#rangeNote').textContent=`${sel.from} ~ ${sel.to} (${len}일)`+(prev?` · ${pWord} 기준: ${pFrom} ~ ${pTo}`:'')+` · 자료는 ${dl.to}까지 · 흐린 막대는 기간 일부만 포함`;
+  const pf=hasPacks()?packFrom():null;
+  $('#rangeNote').textContent=`${sel.from} ~ ${sel.to} (${len}일)`+(prev?` · ${pWord} 기준: ${pFrom} ~ ${pTo}`:'')+` · 자료는 ${dl.to}까지 · 흐린 막대는 기간 일부만 포함`
+    +(hasPacks()&&(!pf||sel.from<pf)?` · 팩수는 ${pf||'아직 없음'}${pf?'부터':''}`:'');
 }
 
 function buildRangeBtns(){
@@ -648,6 +658,7 @@ function setup(){
     $('#holiSub').textContent=D.holiday.sub||'';}
   $('#stackSub').textContent=D.stackSub||('주간 전체 매출을 채널이 어떻게 나눠 갖는가 ('+UNIT+')');
   if(D.daily) initRange();
+  if(hasPacks()&&!METS.includes('팩수')) METS.push('팩수');
 
   buildBtns();
   initTabs();
@@ -733,14 +744,15 @@ function renderToday(){
   if(!ids.length) return;
   $('#todaySec').classList.remove('hidden');
   const div=D.revenueDivisor||10000, now=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
-  const sum=ids.reduce((a,id)=>[a[0]+(T.channels[id].r||0),a[1]+(T.channels[id].c||0)],[0,0]);
+  const tp=v=>v.p!=null?v.p:NaN;
+  const sum=ids.reduce((a,id)=>[a[0]+(T.channels[id].r||0),a[1]+(T.channels[id].c||0),a[2]+tp(T.channels[id])],[0,0,0]);
   const miss=D.channels.filter(c=>!T.channels[c.id]).map(c=>c.name);
   $('#todayTitle').textContent=(T.date===now?'오늘 ':'')+mdw(T.date)+' '+T.at+'까지';
   $('#todayNote').textContent='하루가 끝나지 않은 숫자라 아래 기간 합계에는 넣지 않았습니다'+(miss.length?' · 못 받은 곳: '+miss.join('·'):'');
   $('#todayTiles').innerHTML=[['종합',sum,'']].concat(ids.map(id=>{const v=T.channels[id];
-      return [chName(id),[v.r||0,v.c||0],v.at&&v.at!==T.at?v.at+' 기준':''];}))
+      return [chName(id),[v.r||0,v.c||0,tp(v)],v.at&&v.at!==T.at?v.at+' 기준':''];}))
     .map(([k,v,n])=>'<div class="tile"><div class="k">'+k+'</div><div class="v">'+fmt(v[0]/div)+UNIT+'</div>'+
-      '<div class="d">'+fmt(v[1])+'건'+(n?' · '+n:'')+'</div></div>').join('');
+      '<div class="d">'+fmt(v[1])+'건'+(Number.isFinite(v[2])?' · '+fmt(v[2])+'팩':'')+(n?' · '+n:'')+'</div></div>').join('');
 }
 
 const WD=['일','월','화','수','목','금','토'];
@@ -1980,9 +1992,10 @@ function hideTip(){tip.style.opacity='0';}
 
 function renderMain(){
   const d=seriesOf(sel.ch)[sel.seg]||{r:[],c:[]};
-  const vals=sel.met==='매출'?d.r:d.c;
+  const raw=sel.met==='매출'?d.r:(sel.met==='팩수'?(d.p||[]):d.c);
+  const vals=raw.map(v=>v==null?0:v), none=raw.map(v=>v==null);
   const labels=labelsOf(sel.seg);
-  const unit=sel.met==='매출'?UNIT:'건';
+  const unit=sel.met==='매출'?UNIT:(sel.met==='팩수'?'팩':'건');
   const col=chColor(sel.ch);
   const situ=(sel.seg==='전체'&&D.situations)?D.situations:null;
   const W=680,H=300,padL=46,padR=14,padT=18,padB=situ?54:40;
@@ -2002,8 +2015,8 @@ function renderMain(){
   const step=Math.max(1,Math.ceil(vals.length*lw/iw));
   vals.forEach((v,i)=>{
     const bx=x(i)-bw/2, by=y(v), bh=padT+ih-by;
-    s+=`<rect data-i="${i}" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="${bw<8?1:4}" fill="${col}"${part[i]?' opacity="0.45"':''}></rect>`;
-    if(vals.length<=16) s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(by-6).toFixed(1)}" text-anchor="middle">${fmt(v)}</text>`;
+    if(!none[i]) s+=`<rect data-i="${i}" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0,bh).toFixed(1)}" rx="${bw<8?1:4}" fill="${col}"${part[i]?' opacity="0.45"':''}></rect>`;
+    if(vals.length<=16) s+=`<text class="vlabel" x="${x(i).toFixed(1)}" y="${(by-6).toFixed(1)}" text-anchor="middle">${none[i]?'—':fmt(v)}</text>`;
     if(i%step===0) s+=`<text class="axis" x="${x(i).toFixed(1)}" y="${(padT+ih+16).toFixed(1)}" text-anchor="middle">${labels[i]||''}</text>`;
     if(situ&&situ[i]){const st=situ[i].length>8?situ[i].slice(0,8)+'…':situ[i];
       s+=`<text class="situ" x="${x(i).toFixed(1)}" y="${(padT+ih+32).toFixed(1)}" text-anchor="middle">${st}</text>`;}
@@ -2017,7 +2030,7 @@ function renderMain(){
     r.addEventListener('mouseleave',hideTip);
   });
   $('#mainTitle').textContent=`${chName(sel.ch)} · ${sel.seg} · ${sel.met}`;
-  $('#mainSub').textContent=`${sel.seg} 기준 ${unitWord()} 추이 (${sel.met==='매출'?UNIT:'건'})`;
+  $('#mainSub').textContent=`${sel.seg} 기준 ${unitWord()} 추이 (${unit})`+(sel.met==='팩수'?' · 세트는 들어 있는 팩 수로 셈'+(none.some(Boolean)?' · — 는 팩수 자료가 없는 기간':''):'');
 }
 
 function renderStack(){
@@ -2107,9 +2120,11 @@ function renderTable(){
   d.r.forEach((rv,i)=>{
     let delta='—',cls='';
     if(i>0&&d.r[i-1]&&!part[i]&&!part[i-1]){const p=((rv-d.r[i-1])/d.r[i-1]*100);delta=(p>=0?'+':'')+p.toFixed(0)+'%';cls=p>0?'pos':(p<0?'neg':'');}
-    rows+=`<tr><td>${labels[i]||''}</td><td>${fmt(rv)}</td><td>${fmt(d.c[i]||0)}</td><td class="${cls}">${delta}</td><td class="situcell">${situ&&situ[i]?situ[i]:''}</td></tr>`;
+    const pk=hasPacks()?`<td>${d.p&&d.p[i]!=null?fmt(d.p[i]):'—'}</td>`:'';
+    rows+=`<tr><td>${labels[i]||''}</td><td>${fmt(rv)}</td><td>${fmt(d.c[i]||0)}</td>${pk}<td class="${cls}">${delta}</td><td class="situcell">${situ&&situ[i]?situ[i]:''}</td></tr>`;
   });
   $('#tbody').innerHTML=rows;
+  $('#thPack').classList.toggle('hidden',!hasPacks());
   $('#tableTitle').textContent=`${unitWord()} 상세 — ${chName(sel.ch)} · ${sel.seg}`;
   $('#thPeriod').textContent={일별:'날짜',주간:'주',월별:'월'}[unitWord()];
   $('#thDelta').textContent={일별:'전일 대비',주간:'전주 대비',월별:'전월 대비'}[unitWord()];
