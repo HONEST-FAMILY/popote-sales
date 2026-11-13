@@ -377,6 +377,11 @@
     </div>
 
     <div id="paneSales" role="tabpanel" aria-labelledby="tabSales">
+      <section id="todaySec" class="hidden">
+        <div class="sec-h"><h2 id="todayTitle">오늘 지금까지</h2><span class="note" id="todayNote"></span></div>
+        <div class="tiles" id="todayTiles"></div>
+      </section>
+
       <section id="rangeSec" class="hidden">
         <div class="card">
           <div class="filters">
@@ -628,6 +633,7 @@ function setup(){
     if(D.verdict.tone==='bad')$('#verdictMark').style.background='var(--bad)';
     else if(D.verdict.tone==='warn')$('#verdictMark').style.background='var(--warn)';}
   // tiles
+  renderToday();
   renderTiles();
   renderReferral();
   renderExperiment();
@@ -720,6 +726,21 @@ function renderTiles(){
     const chip=t.chip?('<span class="chip '+(t.chipTone||'flat')+'">'+t.chip+'</span>'):'';
     return '<div class="tile"><div class="k">'+(t.k||'')+'</div><div class="v">'+(t.v||'')+'</div>'+
            '<div class="d">'+(t.d||'')+' '+chip+'</div></div>';}).join('');
+}
+
+function renderToday(){
+  const T=D.today, ids=T&&T.channels?D.channels.map(c=>c.id).filter(id=>T.channels[id]):[];
+  if(!ids.length) return;
+  $('#todaySec').classList.remove('hidden');
+  const div=D.revenueDivisor||10000, now=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+  const sum=ids.reduce((a,id)=>[a[0]+(T.channels[id].r||0),a[1]+(T.channels[id].c||0)],[0,0]);
+  const miss=D.channels.filter(c=>!T.channels[c.id]).map(c=>c.name);
+  $('#todayTitle').textContent=(T.date===now?'오늘 ':'')+mdw(T.date)+' '+T.at+'까지';
+  $('#todayNote').textContent='하루가 끝나지 않은 숫자라 아래 기간 합계에는 넣지 않았습니다'+(miss.length?' · 못 받은 곳: '+miss.join('·'):'');
+  $('#todayTiles').innerHTML=[['종합',sum,'']].concat(ids.map(id=>{const v=T.channels[id];
+      return [chName(id),[v.r||0,v.c||0],v.at&&v.at!==T.at?v.at+' 기준':''];}))
+    .map(([k,v,n])=>'<div class="tile"><div class="k">'+k+'</div><div class="v">'+fmt(v[0]/div)+UNIT+'</div>'+
+      '<div class="d">'+fmt(v[1])+'건'+(n?' · '+n:'')+'</div></div>').join('');
 }
 
 const WD=['일','월','화','수','목','금','토'];
